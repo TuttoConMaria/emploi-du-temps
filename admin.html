@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Administration - CPET CATHOLIQUE SAINT JOSEPH BOHICON</title>
+    <style>
+        body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 20px; }
+        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .header { text-align: center; border-bottom: 2px solid #3b5998; padding-bottom: 15px; margin-bottom: 25px; }
+        .header h1 { margin: 0; color: #1a365d; font-size: 24px; text-transform: uppercase; }
+        .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: normal; }
+        .actions { text-align: right; margin-bottom: 20px; }
+        .btn-print { background-color: #27ae60; color: white; padding: 10px 20px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-print:hover { background-color: #219150; }
+        .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 30px; border-radius: 6px; page-break-after: always; }
+        .card-header { margin-bottom: 15px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { border: 1px solid #ddd; text-align: center; padding: 8px; font-size: 13px; }
+        th { background-color: #3b5998; color: white; }
+        .footer-signature { margin-top: 30px; text-align: right; padding-right: 20px; }
+        .footer-signature p { margin: 2px 0; color: #2c3e50; }
+        .footer-signature .title { font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        .footer-signature .name { font-weight: bold; font-size: 14px; margin-top: 35px; }
+        @media print {
+            .actions, h1.admin-title { display: none; }
+            body { background: white; margin: 0; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="actions">
+        <button class="btn-print" onclick="window.print()">Imprimer tout en PDF</button>
+    </div>
+
+    <h1 class="admin-title" style="text-align: center; color: #2c3e50;">Récapitulatif des Emplois du Temps</h1>
+
+    <div id="schedulesContainer"></div>
+</div>
+
+<script>
+    const hours = [
+        '07h00 - 08h00', '08h00 - 09h00', '09h00 - 10h00',
+        '10h00 - 11h00', '11h00 - 12h00', '12h00 - 13h00',
+        '13h00 - 14h00', '14h00 - 15h00', '15h00 - 16h00',
+        '16h00 - 17h00', '17h00 - 18h00', '18h00 - 19h00'
+    ];
+    const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+
+    async function loadAdminData() {
+        try {
+            const res = await fetch('/api/schedules');
+            const schedules = await res.json();
+            const container = document.getElementById('schedulesContainer');
+            container.innerHTML = '';
+
+            if (schedules.length === 0) {
+                container.innerHTML = '<p style="text-align:center;">Aucun emploi du temps enregistré pour le moment.</p>';
+                return;
+            }
+
+            schedules.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'card';
+
+                let tableRows = '';
+                hours.forEach(hour => {
+                    tableRows += `<tr><td style="font-weight:bold;">${hour}</td>`;
+                    days.forEach(day => {
+                        const val = (item.schedule && item.schedule[day] && item.schedule[day][hour]) ? item.schedule[day][hour] : '';
+                        tableRows += `<td>${val}</td>`;
+                    });
+                    tableRows += `</tr>`;
+                });
+
+                card.innerHTML = `
+                    <div class="header">
+                        <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
+                        <h2>Emploi du temps individuel de l'enseignant</h2>
+                    </div>
+                    <div class="card-header">
+                        <p><strong>Enseignant :</strong> ${item.teacherName} | <strong>Matière :</strong> ${item.subject} ${item.phone ? '| <strong>Tél :</strong> ' + item.phone : ''}</p>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Horaires</th>
+                                <th>Lundi</th>
+                                <th>Mardi</th>
+                                <th>Mercredi</th>
+                                <th>Jeudi</th>
+                                <th>Vendredi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tableRows}
+                        </tbody>
+                    </table>
+                    <div class="footer-signature">
+                        <p class="title">Le DAF / Le Préfet de Discipline</p>
+                        <p class="name">Père Edouard TONOU</p>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    loadAdminData();
+</script>
+
+</body>
+</html>
