@@ -12,24 +12,58 @@ app.get('/api/schedules', (req, res) => {
     res.json(schedules);
 });
 
-// Ajouter un emploi du temps
+// Enregistrer un nouvel emploi du temps
 app.post('/api/schedules', (req, res) => {
     const newSchedule = { id: Date.now().toString(), ...req.body };
+    
+    // Vérification des créneaux déjà occupés
+    const conflict = checkConflict(newSchedule);
+    if (conflict) {
+        return res.status(400).json({ error: conflict });
+    }
+
     schedules.push(newSchedule);
     res.status(201).json(newSchedule);
 });
 
-// Modifier un emploi du temps
+// Modifier un emploi du temps existant
 app.put('/api/schedules/:id', (req, res) => {
     const { id } = req.params;
+    const updatedData = { id: id, ...req.body };
+
+    const conflict = checkConflict(updatedData, id);
+    if (conflict) {
+        return res.status(400).json({ error: conflict });
+    }
+
     const index = schedules.findIndex(s => s.id === id || s.id == id);
     if (index !== -1) {
-        schedules[index] = { id: id, ...req.body };
+        schedules[index] = updatedData;
         res.json(schedules[index]);
     } else {
         res.status(404).send('Emploi du temps non trouvé');
     }
 });
+
+// Fonction pour détecter si une case horaire est déjà prise par un collègue
+function checkConflict(incoming, currentId = null) {
+    for (const existing of schedules) {
+        if (currentId && (existing.id === currentId || existing.id == currentId)) continue;
+        if (!existing.schedule) continue;
+
+        for (const day in incoming.schedule) {
+            for (const hour in incoming.schedule[day]) {
+                const incomingVal = incoming.schedule[day][hour];
+                const existingVal = existing.schedule[day] ? existing.schedule[day][hour] : null;
+
+                if (incomingVal && existingVal) {
+                    return `Le créneau ${day.toUpperCase()} (${hour}) est déjà occupé par ${existing.teacherName} (${existingVal}).`;
+                }
+            }
+        }
+    }
+    return null;
+}
 
 // Supprimer UN emploi du temps
 app.delete('/api/schedules/:id', (req, res) => {
