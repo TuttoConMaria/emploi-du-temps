@@ -18,11 +18,20 @@
         th, td { border: 1px solid #ddd; text-align: center; padding: 6px; font-size: 13px; }
         th { background-color: #3b5998; color: white; }
         td input { width: 90%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
+        .footer-signature { margin-top: 30px; text-align: right; padding-right: 20px; }
+        .footer-signature p { margin: 2px 0; color: #2c3e50; }
+        .footer-signature .title { font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        .footer-signature .name { font-weight: bold; font-size: 14px; margin-top: 35px; }
         .btn-group { display: flex; gap: 10px; margin-top: 20px; }
         .btn-submit { background-color: #3b5998; color: white; padding: 12px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; flex: 2; font-size: 16px; }
         .btn-reset { background-color: #e74c3c; color: white; padding: 12px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; flex: 1; font-size: 16px; }
         .btn-submit:hover { background-color: #2d4373; }
         .btn-reset:hover { background-color: #c0392b; }
+        @media print {
+            .btn-group { display: none !important; }
+            body { background: white; margin: 0; }
+            .container { box-shadow: none; padding: 0; max-width: 100%; }
+        }
     </style>
 </head>
 <body>
@@ -30,7 +39,7 @@
 <div class="container">
     <div class="header">
         <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
-        <h2>Saisie de l'emploi du temps individuel</h2>
+        <h2>Emploi du temps individuel de l'enseignant</h2>
     </div>
 
     <form id="scheduleForm">
@@ -64,9 +73,14 @@
             <tbody id="scheduleBody"></tbody>
         </table>
 
+        <div class="footer-signature">
+            <p class="title">Le DAF / Le Préfet de Discipline</p>
+            <p class="name">Père Edouard TONOU</p>
+        </div>
+
         <div class="btn-group">
             <button type="submit" class="btn-submit" id="saveBtn">Enregistrer l'emploi du temps</button>
-            <button type="button" class="btn-reset" onclick="resetForm()">Effacer / Réinitialiser</button>
+            <button type="button" class="btn-reset" onclick="resetForm()">Réinitialiser</button>
         </div>
     </form>
 </div>
@@ -92,6 +106,37 @@
         document.getElementById('scheduleForm').reset();
         document.getElementById('editId').value = '';
         document.getElementById('saveBtn').innerText = "Enregistrer l'emploi du temps";
+    }
+
+    // Gestion du chargement pour édition via paramètre URL (?edit=ID)
+    async function checkEditMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const editId = urlParams.get('edit');
+        if (editId) {
+            try {
+                const res = await fetch('/api/schedules');
+                const schedules = await res.json();
+                const item = schedules.find(s => s.id === editId || s.id == editId);
+                if (item) {
+                    document.getElementById('editId').value = item.id;
+                    document.getElementById('teacherName').value = item.teacherName || '';
+                    document.getElementById('subject').value = item.subject || '';
+                    document.getElementById('phone').value = item.phone || '';
+
+                    const inputs = tbody.querySelectorAll('input');
+                    inputs.forEach(input => {
+                        const day = input.dataset.day;
+                        const hour = input.dataset.hour;
+                        if (item.schedule && item.schedule[day] && item.schedule[day][hour]) {
+                            input.value = item.schedule[day][hour];
+                        }
+                    });
+                    document.getElementById('saveBtn').innerText = "Mettre à jour l'emploi du temps";
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
     }
 
     document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
@@ -126,7 +171,11 @@
 
             if (res.ok) {
                 alert(editId ? 'Modifications enregistrées !' : 'Emploi du temps enregistré !');
-                resetForm();
+                if (editId) {
+                    window.location.href = '/admin.html';
+                } else {
+                    resetForm();
+                }
             } else {
                 alert("Erreur lors de l'enregistrement.");
             }
@@ -135,6 +184,8 @@
             alert("Erreur de connexion au serveur.");
         }
     });
+
+    checkEditMode();
 </script>
 
 </body>
