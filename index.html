@@ -18,6 +18,16 @@
         th, td { border: 1px solid #ddd; text-align: center; padding: 6px; font-size: 13px; }
         th { background-color: #3b5998; color: white; }
         td input { width: 90%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
+        
+        /* Style des cases indisponibles */
+        td input.occupied {
+            background-color: #e2e8f0;
+            color: #718096;
+            font-weight: bold;
+            border: 1px solid #cbd5e0;
+            cursor: not-allowed;
+        }
+
         .footer-signature { margin-top: 30px; text-align: right; padding-right: 20px; }
         .footer-signature p { margin: 2px 0; color: #2c3e50; }
         .footer-signature .title { font-weight: bold; text-transform: uppercase; font-size: 12px; }
@@ -102,13 +112,54 @@
         tbody.appendChild(tr);
     });
 
+    async function loadOccupiedSlots() {
+        const editId = document.getElementById('editId').value;
+        try {
+            const res = await fetch('/api/schedules');
+            const schedules = await res.json();
+
+            const inputs = tbody.querySelectorAll('input');
+            inputs.forEach(input => {
+                input.classList.remove('occupied');
+                input.disabled = false;
+                if (!input.value || input.value === 'OCCUPÉ') {
+                    input.value = '';
+                }
+            });
+
+            schedules.forEach(item => {
+                if (editId && (item.id === editId || item.id == editId)) return;
+
+                if (item.schedule) {
+                    days.forEach(day => {
+                        if (item.schedule[day]) {
+                            hours.forEach(hour => {
+                                const val = item.schedule[day][hour];
+                                if (val && val.trim() !== '') {
+                                    const input = tbody.querySelector(`input[data-day="${day}"][data-hour="${hour}"]`);
+                                    if (input) {
+                                        input.value = 'OCCUPÉ';
+                                        input.classList.add('occupied');
+                                        input.disabled = true;
+                                    }
+                                }
+                            });
+                        }
+                    });
+                }
+            });
+        } catch (err) {
+            console.error('Erreur chargement créneaux:', err);
+        }
+    }
+
     function resetForm() {
         document.getElementById('scheduleForm').reset();
         document.getElementById('editId').value = '';
         document.getElementById('saveBtn').innerText = "Enregistrer l'emploi du temps";
+        loadOccupiedSlots();
     }
 
-    // Gestion du chargement pour édition via paramètre URL (?edit=ID)
     async function checkEditMode() {
         const urlParams = new URLSearchParams(window.location.search);
         const editId = urlParams.get('edit');
@@ -123,20 +174,26 @@
                     document.getElementById('subject').value = item.subject || '';
                     document.getElementById('phone').value = item.phone || '';
 
+                    await loadOccupiedSlots();
+
                     const inputs = tbody.querySelectorAll('input');
                     inputs.forEach(input => {
                         const day = input.dataset.day;
                         const hour = input.dataset.hour;
                         if (item.schedule && item.schedule[day] && item.schedule[day][hour]) {
                             input.value = item.schedule[day][hour];
+                            input.disabled = false;
+                            input.classList.remove('occupied');
                         }
                     });
                     document.getElementById('saveBtn').innerText = "Mettre à jour l'emploi du temps";
+                    return;
                 }
             } catch (err) {
                 console.error(err);
             }
         }
+        loadOccupiedSlots();
     }
 
     document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
@@ -155,7 +212,9 @@
             const day = input.dataset.day;
             const hour = input.dataset.hour;
             const val = input.value.trim();
-            if (val) schedule[day][hour] = val;
+            if (val && !input.disabled && val !== 'OCCUPÉ') {
+                schedule[day][hour] = val;
+            }
         });
 
         const payload = { teacherName, subject, phone, schedule };
@@ -177,7 +236,8 @@
                     resetForm();
                 }
             } else {
-                alert("Erreur lors de l'enregistrement.");
+                const data = await res.json();
+                alert("CONFLIT D'HORAIRE :\n" + (data.error || "Impossible d'enregistrer."));
             }
         } catch (err) {
             console.error(err);
