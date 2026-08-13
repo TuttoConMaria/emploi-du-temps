@@ -25,6 +25,9 @@
         .actions { text-align: center; margin-top: 25px; }
         .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
         .btn-submit:hover { background-color: #2c3e50; }
+
+        .signature-section { margin-top: 40px; float: right; text-align: center; min-width: 250px; }
+        .clear-float { clear: both; }
     </style>
 </head>
 <body>
@@ -36,7 +39,6 @@
     </div>
 
     <form id="scheduleForm" onsubmit="saveSchedule(event)">
-        <!-- Section d'identification du cours / de la classe -->
         <div class="form-section">
             <div class="form-grid">
                 <div class="form-group">
@@ -67,7 +69,6 @@
             </div>
         </div>
 
-        <!-- Tableau de saisie -->
         <table>
             <thead>
                 <tr>
@@ -79,26 +80,23 @@
                     <th>Vendredi</th>
                 </tr>
             </thead>
-            <tbody id="tableBody">
-                <!-- Généré dynamiquement en JS -->
-            </tbody>
+            <tbody id="tableBody"></tbody>
         </table>
 
         <div class="actions">
             <button type="submit" class="btn-submit">Enregistrer l'emploi du temps</button>
         </div>
+
+        <!-- Signature officielle -->
+        <div class="signature-section">
+            <p style="font-size: 14px; margin-bottom: 5px;">Fait à Bohicon, le .........................</p>
+            <p style="font-weight: bold; font-size: 14px; color: #1a365d; margin-bottom: 50px;">Le Directeur Administratif et Financier,</p>
+            <p style="font-weight: bold; font-size: 15px; text-decoration: underline; color: #1a365d;">Père Edouard TONOU</p>
+        </div>
+        <div class="clear-float"></div>
     </form>
 </div>
-<!-- Bloc de Signature du DAF -->
-<div style="margin-top: 40px; text-align: right; margin-right: 20px; page-break-inside: avoid;">
-    <p style="font-size: 14px; margin-bottom: 5px; color: #4a5568;">Fait à Bohicon, le .........................</p>
-    <p style="font-weight: bold; font-size: 14px; color: #1a365d; margin-bottom: 50px;">
-        Le Directeur Administratif et Financier,
-    </p>
-    <p style="font-weight: bold; font-size: 15px; text-decoration: underline; color: #1a365d;">
-        Père Edouard TONOU
-    </p>
-</div>
+
 <script>
     const hours = [
         '07h00 - 08h00', '08h00 - 09h00', '09h00 - 10h00',
@@ -107,17 +105,55 @@
         '16h00 - 17h00', '17h00 - 18h00', '18h00 - 19h00'
     ];
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
-
-    // Génération automatique des lignes du tableau
     const tbody = document.getElementById('tableBody');
-    hours.forEach(hour => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `<td style="font-weight:bold;">${hour}</td>` + 
-            days.map(day => `<td><input type="text" name="${day}_${hour}" placeholder="..."></td>`).join('');
-        tbody.appendChild(tr);
+
+    function buildTable() {
+        tbody.innerHTML = '';
+        hours.forEach(hour => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td style="font-weight:bold;">${hour}</td>` + 
+                days.map(day => `<td><input type="text" name="${day}_${hour}" placeholder="..."></td>`).join('');
+            tbody.appendChild(tr);
+        });
+    }
+
+    buildTable();
+
+    // Affichage automatique des créneaux déjà occupés
+    document.getElementById('className').addEventListener('change', async (e) => {
+        const selectedClass = e.target.value;
+        buildTable();
+
+        if (!selectedClass) return;
+
+        try {
+            const res = await fetch('/api/schedules');
+            const allSchedules = await res.json();
+            const classSchedules = allSchedules.filter(s => s.className === selectedClass);
+
+            classSchedules.forEach(item => {
+                if (item.schedule) {
+                    for (const day in item.schedule) {
+                        for (const hour in item.schedule[day]) {
+                            const val = item.schedule[day][hour];
+                            if (val && val.trim() !== '') {
+                                const input = document.querySelector(`input[name="${day}_${hour}"]`);
+                                if (input) {
+                                    input.value = `${item.teacherName} (${val})`;
+                                    input.style.backgroundColor = '#e2e8f0';
+                                    input.style.fontWeight = 'bold';
+                                    input.disabled = true; // Empêche de modifier un cours existant
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Erreur de chargement :", err);
+        }
     });
 
-    // Envoi des données vers le serveur
     async function saveSchedule(event) {
         event.preventDefault();
 
@@ -126,23 +162,18 @@
         const subject = document.getElementById('subject').value;
         const phone = document.getElementById('phone').value;
 
-        // Structuration du tableau
         const schedule = {};
         days.forEach(day => {
             schedule[day] = {};
             hours.forEach(hour => {
                 const input = document.querySelector(`input[name="${day}_${hour}"]`);
-                schedule[day][hour] = input ? input.value : '';
+                if (input && !input.disabled) {
+                    schedule[day][hour] = input.value;
+                }
             });
         });
 
-        const payload = {
-            className,
-            teacherName,
-            subject,
-            phone,
-            schedule
-        };
+        const payload = { className, teacherName, subject, phone, schedule };
 
         try {
             const res = await fetch('/api/schedules', {
@@ -153,9 +184,10 @@
 
             if (res.ok) {
                 alert('Emploi du temps enregistré avec succès !');
-                document.getElementById('scheduleForm').reset();
+                location.reload();
             } else {
-                alert('Erreur lors de l\'enregistrement.');
+                const errData = await res.json();
+                alert('Erreur : ' + (errData.error || "Erreur lors de l'enregistrement."));
             }
         } catch (err) {
             console.error(err);
