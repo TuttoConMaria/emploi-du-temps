@@ -10,38 +10,21 @@
         .header { text-align: center; border-bottom: 2px solid #3b5998; padding-bottom: 15px; margin-bottom: 25px; }
         .header h1 { margin: 0; color: #1a365d; font-size: 24px; text-transform: uppercase; }
         .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: normal; }
-        .form-group { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 20px; }
-        .form-group div { flex: 1; min-width: 200px; }
-        label { display: block; font-weight: bold; margin-bottom: 5px; color: #2c3e50; }
-        input[type="text"], input[type="tel"] { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; }
-        table { width: 100%; border-collapse: collapse; margin-top: 15px; }
+        
+        .form-section { background: #eef2f7; padding: 20px; border-radius: 6px; margin-bottom: 25px; }
+        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group label { font-weight: bold; margin-bottom: 5px; color: #1a365d; }
+        .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; text-align: center; padding: 6px; font-size: 13px; }
         th { background-color: #3b5998; color: white; }
         td input { width: 90%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
         
-        /* Style des cases indisponibles */
-        td input.occupied {
-            background-color: #e2e8f0;
-            color: #718096;
-            font-weight: bold;
-            border: 1px solid #cbd5e0;
-            cursor: not-allowed;
-        }
-
-        .footer-signature { margin-top: 30px; text-align: right; padding-right: 20px; }
-        .footer-signature p { margin: 2px 0; color: #2c3e50; }
-        .footer-signature .title { font-weight: bold; text-transform: uppercase; font-size: 12px; }
-        .footer-signature .name { font-weight: bold; font-size: 14px; margin-top: 35px; }
-        .btn-group { display: flex; gap: 10px; margin-top: 20px; }
-        .btn-submit { background-color: #3b5998; color: white; padding: 12px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; flex: 2; font-size: 16px; }
-        .btn-reset { background-color: #e74c3c; color: white; padding: 12px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; flex: 1; font-size: 16px; }
-        .btn-submit:hover { background-color: #2d4373; }
-        .btn-reset:hover { background-color: #c0392b; }
-        @media print {
-            .btn-group { display: none !important; }
-            body { background: white; margin: 0; }
-            .container { box-shadow: none; padding: 0; max-width: 100%; }
-        }
+        .actions { text-align: center; margin-top: 25px; }
+        .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-submit:hover { background-color: #2c3e50; }
     </style>
 </head>
 <body>
@@ -49,26 +32,42 @@
 <div class="container">
     <div class="header">
         <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
-        <h2>Emploi du temps individuel de l'enseignant</h2>
+        <h2>Saisie de l'emploi du temps</h2>
     </div>
 
-    <form id="scheduleForm">
-        <input type="hidden" id="editId" value="">
-        <div class="form-group">
-            <div>
-                <label for="teacherName">Nom & Prénom :</label>
-                <input type="text" id="teacherName" required placeholder="Ex: M. KOUANDÉ">
-            </div>
-            <div>
-                <label for="subject">Matière / Classe :</label>
-                <input type="text" id="subject" required placeholder="Ex: Mathématiques / 1ère F3">
-            </div>
-            <div>
-                <label for="phone">Téléphone :</label>
-                <input type="tel" id="phone" placeholder="Ex: +229 01 00 00 00">
+    <form id="scheduleForm" onsubmit="saveSchedule(event)">
+        <!-- Section d'identification du cours / de la classe -->
+        <div class="form-section">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="className">Classe :</label>
+                    <select id="className" required>
+                        <option value="">-- Choisir la classe --</option>
+                        <option value="SECONDE F3">SECONDE F3</option>
+                        <option value="SECONDE F4">SECONDE F4</option>
+                        <option value="SECONDE MA">SECONDE MA</option>
+                        <option value="PREMIERE F3">PREMIERE F3</option>
+                        <option value="PREMIERE F4">PREMIERE F4</option>
+                        <option value="TERMINALE F3">TERMINALE F3</option>
+                        <option value="TERMINALE F4">TERMINALE F4</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="teacherName">Nom de l'Enseignant :</label>
+                    <input type="text" id="teacherName" placeholder="Ex: M. DOSSOU" required>
+                </div>
+                <div class="form-group">
+                    <label for="subject">Matière :</label>
+                    <input type="text" id="subject" placeholder="Ex: Électrotechnique" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Téléphone (facultatif) :</label>
+                    <input type="text" id="phone" placeholder="Ex: +229 00000000">
+                </div>
             </div>
         </div>
 
+        <!-- Tableau de saisie -->
         <table>
             <thead>
                 <tr>
@@ -80,17 +79,13 @@
                     <th>Vendredi</th>
                 </tr>
             </thead>
-            <tbody id="scheduleBody"></tbody>
+            <tbody id="tableBody">
+                <!-- Généré dynamiquement en JS -->
+            </tbody>
         </table>
 
-        <div class="footer-signature">
-            <p class="title">Le DAF / Le Préfet de Discipline</p>
-            <p class="name">Père Edouard TONOU</p>
-        </div>
-
-        <div class="btn-group">
-            <button type="submit" class="btn-submit" id="saveBtn">Enregistrer l'emploi du temps</button>
-            <button type="button" class="btn-reset" onclick="resetForm()">Réinitialiser</button>
+        <div class="actions">
+            <button type="submit" class="btn-submit">Enregistrer l'emploi du temps</button>
         </div>
     </form>
 </div>
@@ -104,148 +99,60 @@
     ];
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
 
-    const tbody = document.getElementById('scheduleBody');
+    // Génération automatique des lignes du tableau
+    const tbody = document.getElementById('tableBody');
     hours.forEach(hour => {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td style="font-weight:bold;">${hour}</td>` + 
-            days.map(day => `<td><input type="text" data-day="${day}" data-hour="${hour}" placeholder="..."></td>`).join('');
+            days.map(day => `<td><input type="text" name="${day}_${hour}" placeholder="..."></td>`).join('');
         tbody.appendChild(tr);
     });
 
-    async function loadOccupiedSlots() {
-        const editId = document.getElementById('editId').value;
-        try {
-            const res = await fetch('/api/schedules');
-            const schedules = await res.json();
+    // Envoi des données vers le serveur
+    async function saveSchedule(event) {
+        event.preventDefault();
 
-            const inputs = tbody.querySelectorAll('input');
-            inputs.forEach(input => {
-                input.classList.remove('occupied');
-                input.disabled = false;
-                if (!input.value || input.value === 'OCCUPÉ') {
-                    input.value = '';
-                }
-            });
-
-            schedules.forEach(item => {
-                if (editId && (item.id === editId || item.id == editId)) return;
-
-                if (item.schedule) {
-                    days.forEach(day => {
-                        if (item.schedule[day]) {
-                            hours.forEach(hour => {
-                                const val = item.schedule[day][hour];
-                                if (val && val.trim() !== '') {
-                                    const input = tbody.querySelector(`input[data-day="${day}"][data-hour="${hour}"]`);
-                                    if (input) {
-                                        input.value = 'OCCUPÉ';
-                                        input.classList.add('occupied');
-                                        input.disabled = true;
-                                    }
-                                }
-                            });
-                        }
-                    });
-                }
-            });
-        } catch (err) {
-            console.error('Erreur chargement créneaux:', err);
-        }
-    }
-
-    function resetForm() {
-        document.getElementById('scheduleForm').reset();
-        document.getElementById('editId').value = '';
-        document.getElementById('saveBtn').innerText = "Enregistrer l'emploi du temps";
-        loadOccupiedSlots();
-    }
-
-    async function checkEditMode() {
-        const urlParams = new URLSearchParams(window.location.search);
-        const editId = urlParams.get('edit');
-        if (editId) {
-            try {
-                const res = await fetch('/api/schedules');
-                const schedules = await res.json();
-                const item = schedules.find(s => s.id === editId || s.id == editId);
-                if (item) {
-                    document.getElementById('editId').value = item.id;
-                    document.getElementById('teacherName').value = item.teacherName || '';
-                    document.getElementById('subject').value = item.subject || '';
-                    document.getElementById('phone').value = item.phone || '';
-
-                    await loadOccupiedSlots();
-
-                    const inputs = tbody.querySelectorAll('input');
-                    inputs.forEach(input => {
-                        const day = input.dataset.day;
-                        const hour = input.dataset.hour;
-                        if (item.schedule && item.schedule[day] && item.schedule[day][hour]) {
-                            input.value = item.schedule[day][hour];
-                            input.disabled = false;
-                            input.classList.remove('occupied');
-                        }
-                    });
-                    document.getElementById('saveBtn').innerText = "Mettre à jour l'emploi du temps";
-                    return;
-                }
-            } catch (err) {
-                console.error(err);
-            }
-        }
-        loadOccupiedSlots();
-    }
-
-    document.getElementById('scheduleForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
-
-        const editId = document.getElementById('editId').value;
+        const className = document.getElementById('className').value;
         const teacherName = document.getElementById('teacherName').value;
         const subject = document.getElementById('subject').value;
         const phone = document.getElementById('phone').value;
 
+        // Structuration du tableau
         const schedule = {};
-        days.forEach(day => schedule[day] = {});
-
-        const inputs = tbody.querySelectorAll('input');
-        inputs.forEach(input => {
-            const day = input.dataset.day;
-            const hour = input.dataset.hour;
-            const val = input.value.trim();
-            if (val && !input.disabled && val !== 'OCCUPÉ') {
-                schedule[day][hour] = val;
-            }
+        days.forEach(day => {
+            schedule[day] = {};
+            hours.forEach(hour => {
+                const input = document.querySelector(`input[name="${day}_${hour}"]`);
+                schedule[day][hour] = input ? input.value : '';
+            });
         });
 
-        const payload = { teacherName, subject, phone, schedule };
-        const url = editId ? `/api/schedules/${editId}` : '/api/schedules';
-        const method = editId ? 'PUT' : 'POST';
+        const payload = {
+            className,
+            teacherName,
+            subject,
+            phone,
+            schedule
+        };
 
         try {
-            const res = await fetch(url, {
-                method: method,
+            const res = await fetch('/api/schedules', {
+                method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
 
             if (res.ok) {
-                alert(editId ? 'Modifications enregistrées !' : 'Emploi du temps enregistré !');
-                if (editId) {
-                    window.location.href = '/admin.html';
-                } else {
-                    resetForm();
-                }
+                alert('Emploi du temps enregistré avec succès !');
+                document.getElementById('scheduleForm').reset();
             } else {
-                const data = await res.json();
-                alert("CONFLIT D'HORAIRE :\n" + (data.error || "Impossible d'enregistrer."));
+                alert('Erreur lors de l\'enregistrement.');
             }
         } catch (err) {
             console.error(err);
-            alert("Erreur de connexion au serveur.");
+            alert('Impossible de contacter le serveur.');
         }
-    });
-
-    checkEditMode();
+    }
 </script>
 
 </body>
