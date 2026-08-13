@@ -9,39 +9,65 @@
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .header { text-align: center; border-bottom: 2px solid #3b5998; padding-bottom: 15px; margin-bottom: 25px; }
         .header h1 { margin: 0; color: #1a365d; font-size: 24px; text-transform: uppercase; }
-        .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: normal; }
-        .actions { text-align: right; margin-bottom: 20px; }
+        .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: bold; text-transform: uppercase; }
+        
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #eef2f7; padding: 15px; border-radius: 6px; }
+        .filter-group { display: flex; align-items: center; gap: 10px; }
+        .filter-group label { font-weight: bold; color: #1a365d; }
+        .filter-group select { padding: 8px 12px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; font-weight: bold; }
+        
+        .actions { text-align: right; }
         .btn-print { background-color: #27ae60; color: white; padding: 10px 20px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-left: 10px; }
-        .btn-edit { background-color: #f39c12; color: white; padding: 8px 15px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin-right: 5px; }
+        .btn-print:hover { background-color: #219150; }
         .btn-danger { background-color: #e74c3c; color: white; padding: 8px 15px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
-        .btn-edit:hover { background-color: #d68910; }
         .btn-danger:hover { background-color: #c0392b; }
+        
         .card { border: 1px solid #ccc; padding: 20px; margin-bottom: 30px; border-radius: 6px; page-break-after: always; position: relative; }
         .card-header { margin-bottom: 15px; font-size: 14px; }
         .card-actions { text-align: right; margin-bottom: 10px; }
+        
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; text-align: center; padding: 8px; font-size: 13px; }
         th { background-color: #3b5998; color: white; }
+        
         .footer-signature { margin-top: 30px; text-align: right; padding-right: 20px; }
         .footer-signature p { margin: 2px 0; color: #2c3e50; }
         .footer-signature .title { font-weight: bold; text-transform: uppercase; font-size: 12px; }
         .footer-signature .name { font-weight: bold; font-size: 14px; margin-top: 35px; }
+        
         @media print {
-            .actions, .card-actions, h1.admin-title { display: none !important; }
+            .top-bar, .card-actions, h1.admin-title { display: none !important; }
             body { background: white; margin: 0; }
             .container { box-shadow: none; padding: 0; max-width: 100%; }
+            .card { border: none; padding: 0; margin-bottom: 0; }
         }
     </style>
 </head>
 <body>
 
 <div class="container">
-    <div class="actions">
-        <button class="btn-danger" onclick="clearAllSchedules()">Tout Supprimer</button>
-        <button class="btn-print" onclick="window.print()">Imprimer tout en PDF</button>
-    </div>
-
     <h1 class="admin-title" style="text-align: center; color: #2c3e50;">Récapitulatif des Emplois du Temps</h1>
+
+    <!-- Barre supérieure de filtrage et d'actions -->
+    <div class="top-bar">
+        <div class="filter-group">
+            <label for="classFilter">Filtrer par Classe :</label>
+            <select id="classFilter" onchange="filterSchedules()">
+                <option value="ALL">-- Toutes les classes --</option>
+                <option value="SECONDE F3">SECONDE F3</option>
+                <option value="SECONDE F4">SECONDE F4</option>
+                <option value="SECONDE MA">SECONDE MA</option>
+                <option value="PREMIERE F3">PREMIERE F3</option>
+                <option value="PREMIERE F4">PREMIERE F4</option>
+                <option value="TERMINALE F3">TERMINALE F3</option>
+                <option value="TERMINALE F4">TERMINALE F4</option>
+            </select>
+        </div>
+        <div class="actions">
+            <button class="btn-danger" onclick="clearAllSchedules()">Tout Supprimer</button>
+            <button class="btn-print" onclick="window.print()">Imprimer en PDF</button>
+        </div>
+    </div>
 
     <div id="schedulesContainer"></div>
 </div>
@@ -54,77 +80,87 @@
         '16h00 - 17h00', '17h00 - 18h00', '18h00 - 19h00'
     ];
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
+    
+    let allSchedules = []; // Stockage local des données reçues
 
     async function loadAdminData() {
         try {
             const res = await fetch('/api/schedules');
-            const schedules = await res.json();
-            const container = document.getElementById('schedulesContainer');
-            container.innerHTML = '';
-
-            if (!schedules || schedules.length === 0) {
-                container.innerHTML = '<p style="text-align:center;">Aucun emploi du temps enregistré pour le moment.</p>';
-                return;
-            }
-
-            schedules.forEach((item, index) => {
-                const card = document.createElement('div');
-                card.className = 'card';
-
-                let tableRows = '';
-                hours.forEach(hour => {
-                    tableRows += `<tr><td style="font-weight:bold;">${hour}</td>`;
-                    days.forEach(day => {
-                        const val = (item.schedule && item.schedule[day] && item.schedule[day][hour]) ? item.schedule[day][hour] : '';
-                        tableRows += `<td>${val}</td>`;
-                    });
-                    tableRows += `</tr>`;
-                });
-
-                const id = item.id || index;
-
-                card.innerHTML = `
-                    <div class="card-actions">
-                        <button class="btn-edit" onclick="editSchedule('${id}')">Modifier</button>
-                        <button class="btn-danger" onclick="deleteSchedule('${id}')">Supprimer</button>
-                    </div>
-                    <div class="header">
-                        <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
-                        <h2>Emploi du temps individuel de l'enseignant</h2>
-                    </div>
-                    <div class="card-header">
-                        <p><strong>Enseignant :</strong> ${item.teacherName} | <strong>Matière :</strong> ${item.subject} ${item.phone ? '| <strong>Tél :</strong> ' + item.phone : ''}</p>
-                    </div>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Horaires</th>
-                                <th>Lundi</th>
-                                <th>Mardi</th>
-                                <th>Mercredi</th>
-                                <th>Jeudi</th>
-                                <th>Vendredi</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${tableRows}
-                        </tbody>
-                    </table>
-                    <div class="footer-signature">
-                        <p class="title">Le DAF / Le Préfet de Discipline</p>
-                        <p class="name">Père Edouard TONOU</p>
-                    </div>
-                `;
-                container.appendChild(card);
-            });
+            allSchedules = await res.json();
+            renderSchedules(allSchedules);
         } catch (err) {
             console.error(err);
         }
     }
 
-    async function editSchedule(id) {
-        // Redirige vers la page d'accueil en chargeant l'ID à modifier
-        window.location.href = `/?edit=${id}`;
+    function renderSchedules(schedules) {
+        const container = document.getElementById('schedulesContainer');
+        container.innerHTML = '';
+
+        if (!schedules || schedules.length === 0) {
+            container.innerHTML = '<p style="text-align:center; font-style:italic;">Aucun emploi du temps trouvé.</p>';
+            return;
+        }
+
+        schedules.forEach((item, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+
+            let tableRows = '';
+            hours.forEach(hour => {
+                tableRows += `<tr><td style="font-weight:bold;">${hour}</td>`;
+                days.forEach(day => {
+                    const val = (item.schedule && item.schedule[day] && item.schedule[day][hour]) ? item.schedule[day][hour] : '';
+                    tableRows += `<td>${val}</td>`;
+                });
+                tableRows += `</tr>`;
+            });
+
+            const classNameDisplay = item.className ? item.className : 'Classe non précisée';
+
+            card.innerHTML = `
+                <div class="card-actions">
+                    <button class="btn-danger" onclick="deleteSchedule('${item.id || index}')">Supprimer cet emploi du temps</button>
+                </div>
+                <div class="header">
+                    <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
+                    <h2>Emploi du temps — Classe : ${classNameDisplay}</h2>
+                </div>
+                <div class="card-header">
+                    <p><strong>Enseignant :</strong> ${item.teacherName || 'Non renseigné'} | <strong>Matière :</strong> ${item.subject || 'Non renseignée'} ${item.phone ? '| <strong>Tél :</strong> ' + item.phone : ''}</p>
+                </div>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Horaires</th>
+                            <th>Lundi</th>
+                            <th>Mardi</th>
+                            <th>Mercredi</th>
+                            <th>Jeudi</th>
+                            <th>Vendredi</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${tableRows}
+                    </tbody>
+                </table>
+                <div class="footer-signature">
+                    <p class="title">Le DAF / Le Préfet de Discipline</p>
+                    <p class="name">Père Edouard TONOU</p>
+                </div>
+            `;
+            container.appendChild(card);
+        });
+    }
+
+    function filterSchedules() {
+        const selectedClass = document.getElementById('classFilter').value;
+        if (selectedClass === 'ALL') {
+            renderSchedules(allSchedules);
+        } else {
+            const filtered = allSchedules.filter(item => item.className === selectedClass);
+            renderSchedules(filtered);
+        }
     }
 
     async function deleteSchedule(id) {
