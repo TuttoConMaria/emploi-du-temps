@@ -2,7 +2,6 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 const path = require('path');
-
 const app = express();
 
 // Middleware
@@ -31,6 +30,8 @@ const scheduleSchema = new mongoose.Schema({
 const Schedule = mongoose.model('Schedule', scheduleSchema);
 
 // Routes
+
+// GET - Récupérer tous les emplois
 app.get('/api/schedules', async (req, res) => {
     try {
         const schedules = await Schedule.find();
@@ -40,6 +41,18 @@ app.get('/api/schedules', async (req, res) => {
     }
 });
 
+// POST - Créer un nouvel emploi
+app.post('/api/schedules', async (req, res) => {
+    try {
+        const newSchedule = new Schedule(req.body);
+        const savedSchedule = await newSchedule.save();
+        res.json(savedSchedule);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// GET - Récupérer par ID
 app.get('/api/schedules/:id', async (req, res) => {
     try {
         const schedule = await Schedule.findById(req.params.id);
@@ -50,6 +63,7 @@ app.get('/api/schedules/:id', async (req, res) => {
     }
 });
 
+// PUT - Modifier un emploi
 app.put('/api/schedules/:id', async (req, res) => {
     try {
         const updatedSchedule = await Schedule.findByIdAndUpdate(
@@ -63,6 +77,7 @@ app.put('/api/schedules/:id', async (req, res) => {
     }
 });
 
+// DELETE - Supprimer un emploi
 app.delete('/api/schedules/:id', async (req, res) => {
     try {
         await Schedule.findByIdAndDelete(req.params.id);
@@ -76,4 +91,3 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
-
