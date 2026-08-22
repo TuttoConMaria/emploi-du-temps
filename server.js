@@ -8,7 +8,7 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.static(path.join(__dirname, ));
 
 // Connexion à MongoDB Atlas (utilise la variable d'environnement ou l'URI directe)
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:S%40ntos95@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority';
