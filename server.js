@@ -1,71 +1,83 @@
-
 const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
 const path = require('path');
-const { MongoClient, ServerApiVersion } = require('mongodb');
-const app = express();
-const PORT = process.env.PORT || 3000;
 
-const uri = process.env.MONGODB_URI || "mongodb+srv://tuttoconmaria_db_user:pass1234@cluster0.fruilcf.mongodb.net/?retryWrites=true&w=majority";
-const client = new MongoClient(uri, {
-    serverApi: {
-        version: ServerApiVersion.v1,
-        strict: true,
-        deprecationErrors: true,
-    }
+const app = express();
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// Connexion à MongoDB Atlas (utilise la variable d'environnement ou l'URI directe)
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:S%40ntos95@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority';
+
+mongoose.connect(MONGODB_URI, {
+    useNewUrlParser: true,
+    useUnifiedTopology: true
+})
+.then(() => console.log('✅ Connecté à MongoDB Atlas'))
+.catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
+
+// Définition du modèle de données pour l'Emploi du Temps
+const scheduleSchema = new mongoose.Schema({
+    className: String,
+    teacherName: String,
+    subject: String,
+    phone: String,
+    schedule: Object
 });
 
-let db, schedulesCollection;
+const Schedule = mongoose.model('Schedule', scheduleSchema);
 
-async function startServer() {
-    try {
-        await client.connect();
-        db = client.db("tuttoconmaria_db");
-        schedulesCollection = db.collection("schedules");
-        console.log("Connecté à MongoDB Atlas avec succès !");
-        app.listen(PORT, () => {
-            console.log(`Serveur démarré sur le port ${PORT}`);
-        });
-    } catch (err) {
-        console.error("Erreur de connexion à MongoDB :", err);
-    }
-}
-
-startServer();
-
-app.use(express.json());
-app.use(express.static(__dirname));
-
-// Récupérer les emplois du temps depuis MongoDB
+// 1. Route pour récupérer tous les emplois du temps
 app.get('/api/schedules', async (req, res) => {
     try {
-        const schedules = await schedulesCollection.find({}).toArray();
+        const schedules = await Schedule.find();
         res.json(schedules);
     } catch (err) {
-        res.status(500).json({ error: "Erreur lors de la lecture des données" });
+        res.status(500).json({ message: err.message });
     }
 });
 
-// Enregistrer un nouvel emploi du temps dans MongoDB
-app.post('/api/schedules', async (req, res) => {
+// 2. Route pour récupérer un emploi du temps par son ID
+app.get('/api/schedules/:id', async (req, res) => {
     try {
-        const newSchedule = req.body;
-        await schedulesCollection.updateOne(
-            { className: newSchedule.className },
-            { $set: newSchedule },
-            { upsert: true }
+        const schedule = await Schedule.findById(req.params.id);
+        if (!schedule) return res.status(404).json({ message: 'Non trouvé' });
+        res.json(schedule);
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// 3. Route pour MODIFIER / SAUVEGARDER un emploi du temps (C'est celle-ci qui manquait ou bloquait)
+app.put('/api/schedules/:id', async (req, res) => {
+    try {
+        const updatedSchedule = await Schedule.findByIdAndUpdate(
+            req.params.id,
+            req.body,
+            { new: true }
         );
-        res.status(200).json({ message: 'Enregistré dans MongoDB avec succès !' });
+        res.json(updatedSchedule);
     } catch (err) {
-        res.status(500).json({ error: "Erreur lors de l'enregistrement" });
+        res.status(500).json({ message: err.message });
     }
 });
 
-// Réinitialiser les données
-app.delete('/api/schedules', async (req, res) => {
+// 4. Route pour SUPPRIMER un emploi du temps
+app.delete('/api/schedules/:id', async (req, res) => {
     try {
-        await schedulesCollection.deleteMany({});
-        res.status(200).json({ message: 'Données effacées de MongoDB.' });
+        await Schedule.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Supprimé avec succès' });
     } catch (err) {
-        res.status(500).json({ error: "Erreur lors de la suppression" });
+        res.status(500).json({ message: err.message });
     }
+});
+
+// Port d'écoute
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => {
+    console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
