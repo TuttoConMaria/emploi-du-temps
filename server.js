@@ -8,9 +8,9 @@ const app = express();
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static(path.join(__dirname, ));
+app.use(express.static(__dirname));
 
-// Connexion à MongoDB Atlas (utilise la variable d'environnement ou l'URI directe)
+// Connexion à MongoDB Atlas
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:S%40ntos95@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority';
 
 mongoose.connect(MONGODB_URI, {
@@ -20,7 +20,7 @@ mongoose.connect(MONGODB_URI, {
 .then(() => console.log('✅ Connecté à MongoDB Atlas'))
 .catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
 
-// Définition du modèle de données pour l'Emploi du Temps
+// Définition du modèle de données
 const scheduleSchema = new mongoose.Schema({
     className: String,
     teacherName: String,
@@ -31,7 +31,7 @@ const scheduleSchema = new mongoose.Schema({
 
 const Schedule = mongoose.model('Schedule', scheduleSchema);
 
-// 1. Route pour récupérer tous les emplois du temps
+// Routes
 app.get('/api/schedules', async (req, res) => {
     try {
         const schedules = await Schedule.find();
@@ -41,7 +41,6 @@ app.get('/api/schedules', async (req, res) => {
     }
 });
 
-// 2. Route pour récupérer un emploi du temps par son ID
 app.get('/api/schedules/:id', async (req, res) => {
     try {
         const schedule = await Schedule.findById(req.params.id);
@@ -52,7 +51,6 @@ app.get('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// 3. Route pour MODIFIER / SAUVEGARDER un emploi du temps (C'est celle-ci qui manquait ou bloquait)
 app.put('/api/schedules/:id', async (req, res) => {
     try {
         const updatedSchedule = await Schedule.findByIdAndUpdate(
@@ -66,7 +64,6 @@ app.put('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// 4. Route pour SUPPRIMER un emploi du temps
 app.delete('/api/schedules/:id', async (req, res) => {
     try {
         await Schedule.findByIdAndDelete(req.params.id);
@@ -76,8 +73,8 @@ app.delete('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// Port d'écoute
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
+
