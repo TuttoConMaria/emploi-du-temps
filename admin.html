@@ -33,25 +33,26 @@
         .btn-print-class { background-color: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; margin-bottom: 15px; }
         .btn-submit:hover { opacity: 0.9; }
        
-        .class-section { background: white; padding: 25px; margin-bottom: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 5px solid #3b5998; }
-        .class-title { color: #1a365d; font-size: 20px; margin-bottom: 15px; border-bottom: 2px solid #3b5998; padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+        .class-section { background: white; padding: 15px 20px; margin-bottom: 25px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); border-left: 5px solid #3b5998; }
+        .class-title { color: #1a365d; font-size: 16px; margin-bottom: 8px; border-bottom: 2px solid #3b5998; padding-bottom: 5px; }
        
-        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
-        th { background-color: #3b5998; color: white; padding: 12px; text-align: center; font-weight: bold; border: 1px solid #ddd; font-size: 13px; }
-        td { border: 1px solid #ddd; padding: 8px; text-align: center; font-size: 13px; vertical-align: middle; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; }
+        th { background-color: #3b5998; color: white; padding: 6px; text-align: center; font-weight: bold; border: 1px solid #ddd; font-size: 11px; }
+        td { border: 1px solid #ddd; padding: 3px 5px; text-align: center; font-size: 11px; vertical-align: middle; }
         
-        .cell-content { display: flex; flex-direction: column; gap: 4px; align-items: center; }
-        .cell-input { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 12px; text-align: center; }
-        .cell-prof { width: 100%; padding: 4px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; text-align: center; background: #fafafa; }
+        .cell-content { display: flex; flex-direction: column; gap: 2px; align-items: center; }
+        .cell-input { width: 100%; padding: 2px; border: 1px solid #ccc; border-radius: 3px; font-size: 11px; text-align: center; }
+        .cell-prof { width: 100%; padding: 2px; border: 1px solid #ccc; border-radius: 3px; font-size: 10px; text-align: center; background: #fafafa; }
         
-        .btn-action-cell { display: flex; gap: 4px; margin-top: 4px; }
-        .btn-save-cell { background-color: #28a745; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 10px; }
-        .btn-del-cell { background-color: #dc3545; color: white; border: none; padding: 3px 6px; border-radius: 3px; cursor: pointer; font-size: 10px; }
+        .btn-action-cell { display: flex; gap: 4px; margin-top: 2px; }
+        .btn-save-cell { background-color: #28a745; color: white; border: none; padding: 2px 4px; border-radius: 3px; cursor: pointer; font-size: 9px; }
+        .btn-del-cell { background-color: #dc3545; color: white; border: none; padding: 2px 4px; border-radius: 3px; cursor: pointer; font-size: 9px; }
         .btn-save-cell:hover { background-color: #218838; }
         .btn-del-cell:hover { background-color: #c82333; }
 
-        .signature-section { margin-top: 30px; float: right; text-align: center; min-width: 280px; }
-        .clear-float { clear: both; }
+        /* Signature compacte alignée à droite */
+        .signature-container { display: flex; justify-content: flex-end; margin-top: 15px; }
+        .signature-box { text-align: center; min-width: 250px; }
     </style>
 </head>
 <body>
@@ -209,7 +210,7 @@
             let hasContentForTeacher = false;
 
             hours.forEach(hour => {
-                tableHTML += `<tr><td style="font-weight: bold; background: #f9f9f9;">${hour}</td>`;
+                tableHTML += `<tr><td style="font-weight: bold; background: #f9f9f9; white-space: nowrap;">${hour}</td>`;
                 days.forEach(day => {
                     let currentSubj = '';
                     let currentProf = '';
@@ -236,8 +237,8 @@
                             <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
                             <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
                             <div class="btn-action-cell">
-                                <button class="btn-save-cell" id="btn_save_${className}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Modifier</button>
-                                <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supprimer</button>
+                                <button class="btn-save-cell" id="btn_save_${className}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Mod</button>
+                                <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supp</button>
                             </div>
                         </div>
                     </td>`;
@@ -261,16 +262,17 @@
             section.id = `class_section_${index}`;
             section.innerHTML = `
                 <div class="class-title">
-                    <span>CPET CATHOLIQUE SAINT JOSEPH BOHICON - Classe : ${className}</span>
+                    <strong>CPET CATHOLIQUE SAINT JOSEPH BOHICON - Classe : ${className}</strong>
                 </div>
                 <button class="btn-print-class" onclick="printClassPDF('class_section_${index}', '${className}')">📄 Télécharger/Imprimer cette classe en PDF</button>
                 ${tableHTML}
-                <div class="signature-section">
-                    <p style="font-size: 13px; margin-bottom: 3px;">Fait à Bohicon, ${formattedDate}</p>
-                    <p style="font-weight: bold; font-size: 13px; color: #1a365d; margin-bottom: 45px;">Le DAF et Préfet de Discipline,</p>
-                    <p style="font-weight: bold; font-size: 14px; text-decoration: underline; color: #1a365d;">Père Edouard TONOU ADAHOU</p>
+                <div class="signature-container">
+                    <div class="signature-box">
+                        <p style="font-size: 11px; margin-bottom: 2px;">Fait à Bohicon, ${formattedDate}</p>
+                        <p style="font-weight: bold; font-size: 11px; color: #1a365d; margin-bottom: 25px;">Le DAF et Préfet de Discipline,</p>
+                        <p style="font-weight: bold; font-size: 12px; text-decoration: underline; color: #1a365d;">Père Edouard TONOU ADAHOU</p>
+                    </div>
                 </div>
-                <div class="clear-float"></div>
             `;
             listDiv.appendChild(section);
         });
@@ -351,15 +353,13 @@
         if (btnPrint) btnPrint.style.display = 'none';
         actionsCells.forEach(el => el.style.display = 'none');
         
-        // Mettre les matières en ITALIQUE et en gras pour le PDF
         subjectInputs.forEach(input => {
             input.style.border = 'none';
             input.style.background = 'transparent';
             input.style.fontWeight = 'bold';
-            input.style.fontStyle = 'italic'; // <-- Matières en italique
+            input.style.fontStyle = 'italic';
         });
 
-        // Garder les enseignants en texte simple (non italique) mais propre
         profInputs.forEach(input => {
             input.style.border = 'none';
             input.style.background = 'transparent';
@@ -368,10 +368,10 @@
         });
 
         const opt = {
-            margin: 10,
+            margin: 5,
             filename: `emploi_du_temps_${className.replace(/\s+/g, '_')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2 },
+            html2canvas: { scale: 2, useCORS: true },
             jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
         };
 
@@ -379,7 +379,6 @@
             if (btnPrint) btnPrint.style.display = 'block';
             actionsCells.forEach(el => el.style.display = 'flex');
             
-            // Remettre l'affichage normal après le téléchargement
             subjectInputs.forEach(input => {
                 input.style.border = '1px solid #ccc';
                 input.style.background = 'white';
