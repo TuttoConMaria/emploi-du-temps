@@ -11,8 +11,7 @@ app.use(express.json());
 app.use(express.static(__dirname));
 
 // Connexion à MongoDB Atlas
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://admin:S@ntos95@cluster0.xxxx.mongodb.net/?retryWrites=true&w=majority';
-
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://tuttoconmaria_db_user:S%40ntos95@cluster0.fruilcf.mongodb.net/?retryWrites=true&w=majority';
 mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
     useUnifiedTopology: true
