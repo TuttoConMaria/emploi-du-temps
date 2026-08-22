@@ -23,9 +23,13 @@
         .header { background: white; padding: 20px; border-radius: 8px; margin-bottom: 25px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .header h1 { color: #1a365d; font-size: 28px; margin-bottom: 5px; }
         .header p { color: #666; font-size: 14px; }
-        .top-actions { display: flex; gap: 10px; margin-bottom: 25px; flex-wrap: wrap; }
-        .btn-submit { padding: 12px 25px; background-color: #3b5998; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 14px; }
-        .btn-logout { background-color: #dc3545; }
+        
+        .top-actions { display: flex; gap: 15px; margin-bottom: 25px; flex-wrap: wrap; align-items: center; background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .top-actions label { font-weight: bold; color: #333; font-size: 13px; }
+        .top-actions select, .top-actions input[type="date"] { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
+        
+        .btn-submit { padding: 10px 20px; background-color: #3b5998; color: white; border: none; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; }
+        .btn-logout { background-color: #dc3545; margin-left: auto; }
         .btn-print-class { background-color: #17a2b8; color: white; border: none; padding: 8px 15px; border-radius: 4px; font-weight: bold; cursor: pointer; font-size: 13px; margin-bottom: 15px; }
         .btn-submit:hover { opacity: 0.9; }
        
@@ -48,10 +52,6 @@
 
         .signature-section { margin-top: 30px; float: right; text-align: center; min-width: 280px; }
         .clear-float { clear: both; }
-
-        /* Classe utilitaire pour cacher les éléments d'administration lors de la génération du PDF */
-        .pdf-hidden { display: none !important; }
-        .pdf-text-only { display: none; font-size: 12px; font-weight: bold; color: #333; }
     </style>
 </head>
 <body>
@@ -77,10 +77,24 @@
 <div id="adminPage" class="admin-container">
     <div class="header">
         <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
-        <p>Gestion et consultation des emplois du temps par classe</p>
+        <p>Gestion, consultation et filtres des emplois du temps</p>
     </div>
+
     <div class="top-actions">
         <button class="btn-submit" onclick="loadSchedules()">🔄 Actualiser</button>
+        
+        <div>
+            <label for="filterTeacher">Filtrer par Enseignant :</label>
+            <select id="filterTeacher" onchange="filterByTeacher()">
+                <option value="ALL">-- Toutes les classes / Tous --</option>
+            </select>
+        </div>
+
+        <div>
+            <label for="docDate">Date de signature :</label>
+            <input type="date" id="docDate">
+        </div>
+
         <button class="btn-submit btn-logout" onclick="logout()">Déconnexion</button>
     </div>
 
@@ -95,6 +109,14 @@
    
     const ADMIN_LOGIN = 'Edouard';
     const ADMIN_PASSWORD = 'S@ntos95';
+
+    let globalSchedulesData = [];
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const today = new Date().toISOString().split('T')[0];
+        const dateInput = document.getElementById('docDate');
+        if(dateInput) dateInput.value = today;
+    });
 
     function isLoggedIn() {
         return localStorage.getItem('adminLoggedIn') === 'true';
@@ -135,74 +157,152 @@
     async function loadSchedules() {
         try {
             const res = await fetch(API_BASE_URL + '/api/schedules');
-            const schedules = await res.json();
+            globalSchedulesData = await res.json();
            
-            const listDiv = document.getElementById('scheduleList');
-            listDiv.innerHTML = '';
-
-            classes.forEach((className, index) => {
-                const classSchedules = schedules.filter(s => s.className === className);
-               
-                let tableHTML = '<table><thead><tr><th>Horaires</th>';
-                days.forEach(day => tableHTML += `<th>${day.charAt(0).toUpperCase() + day.slice(1)}</th>`);
-                tableHTML += '</tr></thead><tbody>';
-               
-                hours.forEach(hour => {
-                    tableHTML += `<tr><td style="font-weight: bold; background: #f9f9f9;">${hour}</td>`;
-                    days.forEach(day => {
-                        let currentSubj = '';
-                        let currentProf = '';
-                        
-                        classSchedules.forEach(sched => {
-                            if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
-                                currentSubj = sched.schedule[day][hour];
-                                currentProf = sched.teacherName || '';
-                            }
-                        });
-
-                        tableHTML += `<td>
-                            <div class="cell-content">
-                                <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
-                                <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
-                                <div class="btn-action-cell">
-                                    <button class="btn-save-cell" onclick="saveCell('${className}', '${day}', '${hour}')">Modifier</button>
-                                    <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supprimer</button>
-                                </div>
-                            </div>
-                        </td>`;
-                    });
-                    tableHTML += '</tr>';
-                });
-               
-                tableHTML += '</tbody></table>';
-
-                const section = document.createElement('div');
-                section.className = 'class-section';
-                section.id = `class_section_${index}`;
-                section.innerHTML = `
-                    <div class="class-title">
-                        <span>CPET CATHOLIQUE SAINT JOSEPH BOHICON - Classe : ${className}</span>
-                    </div>
-                    <button class="btn-print-class" onclick="printClassPDF('class_section_${index}', '${className}')">📄 Télécharger/Imprimer cette classe en PDF</button>
-                    ${tableHTML}
-                    <div class="signature-section">
-                        <p style="font-size: 13px; margin-bottom: 3px;">Fait à Bohicon, le .........................</p>
-                        <p style="font-weight: bold; font-size: 13px; color: #1a365d; margin-bottom: 45px;">Le DAF et Préfet de Discipline,</p>
-                        <p style="font-weight: bold; font-size: 14px; text-decoration: underline; color: #1a365d;">Père Edouard TONOU ADAHOU</p>
-                    </div>
-                    <div class="clear-float"></div>
-                `;
-                listDiv.appendChild(section);
-            });
+            updateTeacherDropdown();
+            renderSchedules(globalSchedulesData);
         } catch (err) {
             console.error("Erreur :", err);
             alert('Erreur lors du chargement des emplois du temps.');
         }
     }
 
+    function updateTeacherDropdown() {
+        const select = document.getElementById('filterTeacher');
+        const currentSelected = select.value;
+        
+        const teachersSet = new Set();
+        globalSchedulesData.forEach(s => {
+            if (s.teacherName && s.teacherName !== 'Non spécifié' && s.teacherName.trim() !== '') {
+                teachersSet.add(s.teacherName.trim());
+            }
+        });
+
+        select.innerHTML = '<option value="ALL">-- Toutes les classes / Tous --</option>';
+        teachersSet.forEach(prof => {
+            select.innerHTML += `<option value="${prof}">${prof}</option>`;
+        });
+
+        select.value = currentSelected;
+    }
+
+    function filterByTeacher() {
+        const selectedProf = document.getElementById('filterTeacher').value;
+        if (selectedProf === 'ALL') {
+            renderSchedules(globalSchedulesData);
+        } else {
+            renderSchedules(globalSchedulesData, selectedProf);
+        }
+    }
+
+    function renderSchedules(schedules, teacherFilter = 'ALL') {
+        const listDiv = document.getElementById('scheduleList');
+        listDiv.innerHTML = '';
+
+        classes.forEach((className, index) => {
+            const classSchedules = schedules.filter(s => s.className === className);
+           
+            let tableHTML = '<table><thead><tr><th>Horaires</th>';
+            days.forEach(day => tableHTML += `<th>${day.charAt(0).toUpperCase() + day.slice(1)}</th>`);
+            tableHTML += '</tr></thead><tbody>';
+           
+            let hasContentForTeacher = false;
+
+            hours.forEach(hour => {
+                tableHTML += `<tr><td style="font-weight: bold; background: #f9f9f9;">${hour}</td>`;
+                days.forEach(day => {
+                    let currentSubj = '';
+                    let currentProf = '';
+                    
+                    classSchedules.forEach(sched => {
+                        if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
+                            currentSubj = sched.schedule[day][hour];
+                            currentProf = sched.teacherName || '';
+                        }
+                    });
+
+                    let cellHighlight = '';
+                    if (teacherFilter !== 'ALL' && currentProf.toLowerCase() !== teacherFilter.toLowerCase()) {
+                        currentSubj = '';
+                        currentProf = '';
+                        cellHighlight = 'background: #fdfdfd; opacity: 0.3;';
+                    } else if (teacherFilter !== 'ALL' && currentProf.toLowerCase() === teacherFilter.toLowerCase()) {
+                        hasContentForTeacher = true;
+                        cellHighlight = 'background: #e6ffed;';
+                    }
+
+                    tableHTML += `<td style="${cellHighlight}">
+                        <div class="cell-content">
+                            <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
+                            <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
+                            <div class="btn-action-cell">
+                                <button class="btn-save-cell" id="btn_save_${className}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Modifier</button>
+                                <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supprimer</button>
+                            </div>
+                        </div>
+                    </td>`;
+                });
+                tableHTML += '</tr>';
+            });
+           
+            tableHTML += '</tbody></table>';
+
+            if (teacherFilter !== 'ALL' && !hasContentForTeacher) return;
+
+            const rawDate = document.getElementById('docDate').value;
+            let formattedDate = "le .........................";
+            if (rawDate) {
+                const parts = rawDate.split('-');
+                formattedDate = `le ${parts[2]}/${parts[1]}/${parts[0]}`;
+            }
+
+            const section = document.createElement('div');
+            section.className = 'class-section';
+            section.id = `class_section_${index}`;
+            section.innerHTML = `
+                <div class="class-title">
+                    <span>CPET CATHOLIQUE SAINT JOSEPH BOHICON - Classe : ${className}</span>
+                </div>
+                <button class="btn-print-class" onclick="printClassPDF('class_section_${index}', '${className}')">📄 Télécharger/Imprimer cette classe en PDF</button>
+                ${tableHTML}
+                <div class="signature-section">
+                    <p style="font-size: 13px; margin-bottom: 3px;">Fait à Bohicon, ${formattedDate}</p>
+                    <p style="font-weight: bold; font-size: 13px; color: #1a365d; margin-bottom: 45px;">Le DAF et Préfet de Discipline,</p>
+                    <p style="font-weight: bold; font-size: 14px; text-decoration: underline; color: #1a365d;">Père Edouard TONOU ADAHOU</p>
+                </div>
+                <div class="clear-float"></div>
+            `;
+            listDiv.appendChild(section);
+        });
+    }
+
     async function saveCell(className, day, hour) {
         const subject = document.getElementById(`subj_${className}_${day}_${hour}`).value;
         const teacherName = document.getElementById(`prof_${className}_${day}_${hour}`).value;
+        const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
+
+        if (teacherName && teacherName.trim() !== '' && subject && subject.trim() !== '') {
+            let conflictFound = false;
+            let conflictClass = '';
+
+            globalSchedulesData.forEach(sched => {
+                if (sched.className !== className && sched.teacherName && sched.teacherName.toLowerCase() === teacherName.toLowerCase()) {
+                    if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
+                        conflictFound = true;
+                        conflictClass = sched.className;
+                    }
+                }
+            });
+
+            if (conflictFound) {
+                const confirmConflict = confirm(`⚠️ Attention : L'enseignant "${teacherName}" est déjà programmé dans la classe "${conflictClass}" sur ce même créneau (${day} à ${hour}). S'agit-il d'un cours commun (tronc commun) ?`);
+                if (!confirmConflict) return;
+            }
+        }
+
+        const oldText = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
 
         try {
             const res = await fetch(API_BASE_URL + '/api/schedules', {
@@ -217,14 +317,18 @@
             });
 
             if (res.ok) {
-                alert('Heure mise à jour avec succès !');
-                loadSchedules();
+                btn.textContent = 'OK !';
+                setTimeout(() => { loadSchedules(); }, 500);
             } else {
                 alert('Erreur lors de la modification.');
+                btn.textContent = oldText;
+                btn.disabled = false;
             }
         } catch (err) {
             console.error(err);
             alert('Impossible de contacter le serveur.');
+            btn.textContent = oldText;
+            btn.disabled = false;
         }
     }
 
@@ -239,19 +343,28 @@
     function printClassPDF(sectionId, className) {
         const element = document.getElementById(sectionId);
         
-        // Sélectionner et masquer temporairement les boutons et les inputs de modification pour le PDF
         const btnPrint = element.querySelector('.btn-print-class');
         const actionsCells = element.querySelectorAll('.btn-action-cell');
-        const inputs = element.querySelectorAll('.cell-input, .cell-prof');
+        const subjectInputs = element.querySelectorAll('.cell-input');
+        const profInputs = element.querySelectorAll('.cell-prof');
 
         if (btnPrint) btnPrint.style.display = 'none';
         actionsCells.forEach(el => el.style.display = 'none');
         
-        // Transformer temporairement les inputs en simple texte propre pour l'export PDF
-        inputs.forEach(input => {
+        // Mettre les matières en ITALIQUE et en gras pour le PDF
+        subjectInputs.forEach(input => {
             input.style.border = 'none';
             input.style.background = 'transparent';
             input.style.fontWeight = 'bold';
+            input.style.fontStyle = 'italic'; // <-- Matières en italique
+        });
+
+        // Garder les enseignants en texte simple (non italique) mais propre
+        profInputs.forEach(input => {
+            input.style.border = 'none';
+            input.style.background = 'transparent';
+            input.style.fontWeight = 'normal';
+            input.style.fontStyle = 'normal';
         });
 
         const opt = {
@@ -263,13 +376,21 @@
         };
 
         html2pdf().set(opt).from(element).save().then(() => {
-            // Remettre l'affichage normal après le téléchargement
             if (btnPrint) btnPrint.style.display = 'block';
             actionsCells.forEach(el => el.style.display = 'flex');
-            inputs.forEach(input => {
+            
+            // Remettre l'affichage normal après le téléchargement
+            subjectInputs.forEach(input => {
                 input.style.border = '1px solid #ccc';
-                input.style.background = input.classList.contains('cell-prof') ? '#fafafa' : 'white';
+                input.style.background = 'white';
                 input.style.fontWeight = 'normal';
+                input.style.fontStyle = 'normal';
+            });
+            profInputs.forEach(input => {
+                input.style.border = '1px solid #ccc';
+                input.style.background = '#fafafa';
+                input.style.fontWeight = 'normal';
+                input.style.fontStyle = 'normal';
             });
         });
     }
