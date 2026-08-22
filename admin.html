@@ -102,13 +102,8 @@
             font-size: 14px;
         }
         
-        .btn-logout {
-            background-color: #dc3545;
-        }
-        
+        .btn-logout { background-color: #dc3545; }
         .btn-submit:hover { opacity: 0.9; }
-        
-        .schedule-list { }
         
         .schedule-item {
             background: white;
@@ -119,58 +114,24 @@
             border-left: 5px solid #3b5998;
         }
         
-        .schedule-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 20px;
-            padding-bottom: 15px;
-            border-bottom: 2px solid #eee;
-        }
-        
+        .schedule-header { margin-bottom: 20px; }
         .schedule-header h2 { color: #1a365d; font-size: 20px; }
+        .schedule-info { color: #666; font-size: 14px; margin-top: 8px; }
         
-        .schedule-info { color: #666; font-size: 14px; }
-        
-        .schedule-info p { margin: 5px 0; }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 20px 0;
-        }
-        
-        th {
-            background-color: #3b5998;
-            color: white;
-            padding: 12px;
-            text-align: center;
-            font-weight: bold;
-        }
-        
-        td {
-            border: 1px solid #ddd;
-            padding: 10px;
-            text-align: center;
-        }
-        
-        td input {
-            width: 90%;
-            padding: 8px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            font-size: 13px;
-        }
+        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+        th { background-color: #3b5998; color: white; padding: 12px; text-align: center; font-weight: bold; }
+        td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+        td input { width: 85%; padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 13px; }
         
         .btn-delete-hour {
             background-color: #dc3545;
             color: white;
             border: none;
-            padding: 6px 12px;
+            padding: 6px 10px;
             border-radius: 4px;
             cursor: pointer;
             font-weight: bold;
-            font-size: 14px;
+            margin-left: 5px;
         }
         
         .btn-delete-hour:hover { background-color: #c82333; }
@@ -181,17 +142,8 @@
             margin-top: 20px;
         }
         
-        .btn-save {
-            background-color: #28a745;
-            flex: 1;
-        }
-        
-        .btn-delete-schedule {
-            background-color: #dc3545;
-            flex: 1;
-        }
-        
-        .loading { text-align: center; padding: 20px; color: #666; }
+        .btn-save { background-color: #28a745; flex: 1; }
+        .btn-delete-schedule { background-color: #dc3545; flex: 1; }
         
         .empty { text-align: center; padding: 40px; color: #999; }
     </style>
@@ -201,7 +153,7 @@
 <!-- LOGIN PAGE -->
 <div id="loginPage" class="login-container">
     <div class="login-box">
-        <h1>🔐 Admin</h1>
+        <h1>🔐 Administration</h1>
         <form onsubmit="handleLogin(event)">
             <div class="form-group">
                 <label for="login">Login :</label>
@@ -229,7 +181,7 @@
         <button class="btn-submit btn-logout" onclick="logout()">Déconnexion</button>
     </div>
     
-    <div id="scheduleList" class="schedule-list"></div>
+    <div id="scheduleList"></div>
 </div>
 
 <script>
@@ -245,12 +197,10 @@
     const ADMIN_LOGIN = 'Edouard';
     const ADMIN_PASSWORD = 'S@ntos95';
 
-    // Vérifier si connecté
     function isLoggedIn() {
         return localStorage.getItem('adminLoggedIn') === 'true';
     }
 
-    // Login
     function handleLogin(event) {
         event.preventDefault();
         const login = document.getElementById('login').value;
@@ -265,7 +215,6 @@
         }
     }
 
-    // Logout
     function logout() {
         localStorage.removeItem('adminLoggedIn');
         document.getElementById('login').value = '';
@@ -274,19 +223,16 @@
         showLoginPage();
     }
 
-    // Afficher page login
     function showLoginPage() {
         document.getElementById('loginPage').style.display = 'flex';
         document.getElementById('adminPage').style.display = 'none';
     }
 
-    // Afficher page admin
     function showAdminPage() {
         document.getElementById('loginPage').style.display = 'none';
         document.getElementById('adminPage').style.display = 'block';
     }
 
-    // Charger les emplois
     async function loadSchedules() {
         try {
             const res = await fetch(API_BASE_URL + '/api/schedules');
@@ -308,20 +254,16 @@
                 days.forEach(day => {
                     tableHTML += `<th>${day.charAt(0).toUpperCase() + day.slice(1)}</th>`;
                 });
-                tableHTML += '</tr></thead><tbody>';
+                tableHTML += '<th>Action</th></tr></thead><tbody>';
                 
                 hours.forEach(hour => {
                     tableHTML += `<tr>`;
                     tableHTML += `<td style="font-weight: bold; background: #f9f9f9;">${hour}</td>`;
                     days.forEach(day => {
                         const value = schedule.schedule && schedule.schedule[day] && schedule.schedule[day][hour] ? schedule.schedule[day][hour] : '';
-                        tableHTML += `
-                            <td>
-                                <input type="text" id="edit-${schedule._id}-${day}-${hour}" value="${value}">
-                                <button class="btn-delete-hour" onclick="deleteHour('${schedule._id}', '${day}', '${hour}')">X</button>
-                            </td>
-                        `;
+                        tableHTML += `<td><input type="text" id="edit-${schedule._id}-${day}-${hour}" value="${value}"></td>`;
                     });
+                    tableHTML += `<td><button class="btn-delete-hour" onclick="deleteHour('${schedule._id}', '${day}', '${hour}')">X</button></td>`;
                     tableHTML += `</tr>`;
                 });
                 
@@ -329,18 +271,16 @@
 
                 item.innerHTML = `
                     <div class="schedule-header">
-                        <div>
-                            <h2>${schedule.className} - ${schedule.teacherName}</h2>
-                            <div class="schedule-info">
-                                <p><strong>Matière :</strong> ${schedule.subject}</p>
-                                <p><strong>Téléphone :</strong> ${schedule.phone || 'Non fourni'}</p>
-                            </div>
+                        <h2>${schedule.className} - ${schedule.teacherName}</h2>
+                        <div class="schedule-info">
+                            <p><strong>Matière :</strong> ${schedule.subject}</p>
+                            <p><strong>Téléphone :</strong> ${schedule.phone || 'Non fourni'}</p>
                         </div>
                     </div>
                     ${tableHTML}
                     <div class="schedule-actions">
                         <button class="btn-submit btn-save" onclick="updateSchedule('${schedule._id}')">💾 Sauvegarder</button>
-                        <button class="btn-submit btn-delete-schedule" onclick="deleteSchedule('${schedule._id}')">🗑️ Supprimer cet emploi</button>
+                        <button class="btn-submit btn-delete-schedule" onclick="deleteSchedule('${schedule._id}')">🗑️ Supprimer</button>
                     </div>
                 `;
                 listDiv.appendChild(item);
@@ -351,13 +291,11 @@
         }
     }
 
-    // Supprimer une heure
     function deleteHour(scheduleId, day, hour) {
         const input = document.getElementById(`edit-${scheduleId}-${day}-${hour}`);
         input.value = '';
     }
 
-    // Sauvegarder les modifications
     async function updateSchedule(id) {
         try {
             const res = await fetch(API_BASE_URL + `/api/schedules/${id}`);
@@ -393,9 +331,8 @@
         }
     }
 
-    // Supprimer un emploi complet
     async function deleteSchedule(id) {
-        if (!confirm('Êtes-vous sûr de vouloir supprimer cet emploi du temps ?')) return;
+        if (!confirm('Êtes-vous sûr ?')) return;
 
         try {
             const res = await fetch(API_BASE_URL + `/api/schedules/${id}`, {
@@ -413,7 +350,6 @@
         }
     }
 
-    // Initialiser
     if (isLoggedIn()) {
         showAdminPage();
         loadSchedules();
