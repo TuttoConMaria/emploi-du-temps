@@ -3,31 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Saisie Emploi du Temps - CPET CATHOLIQUE SAINT JOSEPH BOHICON</title>
+    <title>Gestion Emploi du Temps - CPET CATHOLIQUE SAINT JOSEPH BOHICON</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 20px; }
-        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .header { text-align: center; border-bottom: 2px solid #3b5998; padding-bottom: 15px; margin-bottom: 25px; }
         .header h1 { margin: 0; color: #1a365d; font-size: 24px; text-transform: uppercase; }
         .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: normal; }
         
-        .form-section { background: #eef2f7; padding: 20px; border-radius: 6px; margin-bottom: 25px; }
-        .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
-        .form-group { display: flex; flex-direction: column; }
-        .form-group label { font-weight: bold; margin-bottom: 5px; color: #1a365d; }
-        .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { border: 1px solid #ddd; text-align: center; padding: 6px; font-size: 13px; }
-        th { background-color: #3b5998; color: white; }
-        td input { width: 90%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
-        
-        .actions { text-align: center; margin-top: 25px; }
-        .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
+        .actions { text-align: center; margin-bottom: 25px; }
+        .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
         .btn-submit:hover { background-color: #2c3e50; }
-
-        .signature-section { margin-top: 40px; float: right; text-align: center; min-width: 250px; }
-        .clear-float { clear: both; }
+        .btn-delete { background-color: #dc3545; }
+        .btn-delete:hover { background-color: #c82333; }
+        .btn-save { background-color: #28a745; }
+        .btn-save:hover { background-color: #218838; }
+        
+        .schedule-list { margin-top: 20px; }
+        .schedule-item { background: #f9f9f9; padding: 20px; margin-bottom: 25px; border-radius: 6px; border-left: 4px solid #3b5998; }
+        .schedule-item h3 { margin: 0 0 15px 0; color: #1a365d; font-size: 18px; }
+        .schedule-item p { margin: 5px 0; font-size: 14px; }
+        .schedule-info { background: white; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
+        
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; text-align: center; padding: 8px; font-size: 13px; }
+        th { background-color: #3b5998; color: white; }
+        td input { width: 95%; padding: 6px; border: 1px solid #ddd; border-radius: 3px; text-align: center; font-size: 12px; }
+        
+        .schedule-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .schedule-actions button { padding: 10px 20px; font-size: 14px; flex: 1; }
     </style>
 </head>
 <body>
@@ -35,66 +39,14 @@
 <div class="container">
     <div class="header">
         <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
-        <h2>Saisie de l'emploi du temps</h2>
+        <h2>Gestion des emplois du temps</h2>
     </div>
 
-    <form id="scheduleForm" onsubmit="saveSchedule(event)">
-        <div class="form-section">
-            <div class="form-grid">
-                <div class="form-group">
-                    <label for="className">Classe :</label>
-                    <select id="className" required>
-                        <option value="">-- Choisir la classe --</option>
-                        <option value="SECONDE F3">SECONDE F3</option>
-                        <option value="SECONDE F4">SECONDE F4</option>
-                        <option value="SECONDE MA">SECONDE MA</option>
-                        <option value="PREMIERE F3">PREMIERE F3</option>
-                        <option value="PREMIERE F4">PREMIERE F4</option>
-                        <option value="TERMINALE F3">TERMINALE F3</option>
-                        <option value="TERMINALE F4">TERMINALE F4</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="teacherName">Nom de l'Enseignant :</label>
-                    <input type="text" id="teacherName" placeholder="Ex: M. DOSSOU" required>
-                </div>
-                <div class="form-group">
-                    <label for="subject">Matière :</label>
-                    <input type="text" id="subject" placeholder="Ex: Électrotechnique" required>
-                </div>
-                <div class="form-group">
-                    <label for="phone">Téléphone (facultatif) :</label>
-                    <input type="text" id="phone" placeholder="Ex: +229 00000000">
-                </div>
-            </div>
-        </div>
+    <div class="actions">
+        <button class="btn-submit" onclick="loadSchedules()">🔄 Actualiser</button>
+    </div>
 
-        <table>
-            <thead>
-                <tr>
-                    <th>Horaires</th>
-                    <th>Lundi</th>
-                    <th>Mardi</th>
-                    <th>Mercredi</th>
-                    <th>Jeudi</th>
-                    <th>Vendredi</th>
-                </tr>
-            </thead>
-            <tbody id="tableBody"></tbody>
-        </table>
-
-        <div class="actions">
-            <button type="submit" class="btn-submit">Enregistrer l'emploi du temps</button>
-        </div>
-
-        <!-- Signature officielle -->
-        <div class="signature-section">
-            <p style="font-size: 14px; margin-bottom: 5px;">Fait à Bohicon, le .........................</p>
-            <p style="font-weight: bold; font-size: 14px; color: #1a365d; margin-bottom: 50px;">Le Directeur Administratif et Financier,</p>
-            <p style="font-weight: bold; font-size: 15px; text-decoration: underline; color: #1a365d;">Père Edouard TONOU</p>
-        </div>
-        <div class="clear-float"></div>
-    </form>
+    <div class="schedule-list" id="scheduleList"></div>
 </div>
 
 <script>
@@ -106,95 +58,120 @@
         '16h00 - 17h00', '17h00 - 18h00', '18h00 - 19h00'
     ];
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
-    const tbody = document.getElementById('tableBody');
 
-    function buildTable() {
-        tbody.innerHTML = '';
-        hours.forEach(hour => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `<td style="font-weight:bold;">${hour}</td>` + 
-                days.map(day => `<td><input type="text" name="${day}_${hour}" placeholder="..."></td>`).join('');
-            tbody.appendChild(tr);
-        });
-    }
-
-    buildTable();
-
-    // Affichage automatique des créneaux déjà occupés
-    document.getElementById('className').addEventListener('change', async (e) => {
-        const selectedClass = e.target.value;
-        buildTable();
-
-        if (!selectedClass) return;
-
+    // Charger et afficher tous les emplois
+    async function loadSchedules() {
         try {
             const res = await fetch(API_BASE_URL + '/api/schedules');
-            const allSchedules = await res.json();
-            const classSchedules = allSchedules.filter(s => s.className === selectedClass);
+            const schedules = await res.json();
+            
+            const listDiv = document.getElementById('scheduleList');
+            listDiv.innerHTML = '';
 
-            classSchedules.forEach(item => {
-                if (item.schedule) {
-                    for (const day in item.schedule) {
-                        for (const hour in item.schedule[day]) {
-                            const val = item.schedule[day][hour];
-                            if (val && val.trim() !== '') {
-                                const input = document.querySelector(`input[name="${day}_${hour}"]`);
-                                if (input) {
-                                    input.value = `${item.teacherName} (${val})`;
-                                    input.style.backgroundColor = '#e2e8f0';
-                                    input.style.fontWeight = 'bold';
-                                    input.disabled = true;
-                                }
-                            }
-                        }
-                    }
-                }
+            if (schedules.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Aucun emploi du temps enregistré.</p>';
+                return;
+            }
+
+            schedules.forEach(schedule => {
+                const item = document.createElement('div');
+                item.className = 'schedule-item';
+                
+                let tableHTML = '<table><thead><tr><th>Horaires</th>';
+                days.forEach(day => tableHTML += `<th>${day.charAt(0).toUpperCase() + day.slice(1)}</th>`);
+                tableHTML += '</tr></thead><tbody>';
+                
+                hours.forEach(hour => {
+                    tableHTML += `<tr><td style="font-weight:bold;">${hour}</td>`;
+                    days.forEach(day => {
+                        const value = schedule.schedule && schedule.schedule[day] && schedule.schedule[day][hour] ? schedule.schedule[day][hour] : '';
+                        tableHTML += `<td><input type="text" id="edit-${schedule._id}-${day}-${hour}" value="${value}"></td>`;
+                    });
+                    tableHTML += '</tr>';
+                });
+                
+                tableHTML += '</tbody></table>';
+
+                item.innerHTML = `
+                    <h3>${schedule.className} - ${schedule.teacherName}</h3>
+                    <div class="schedule-info">
+                        <p><strong>Matière :</strong> ${schedule.subject}</p>
+                        <p><strong>Téléphone :</strong> ${schedule.phone || 'Non fourni'}</p>
+                    </div>
+                    <p style="font-size: 12px; color: #666;"><em>Cliquez sur les heures pour modifier, puis cliquez "Sauvegarder"</em></p>
+                    ${tableHTML}
+                    <div class="schedule-actions">
+                        <button class="btn-submit btn-save" onclick="updateSchedule('${schedule._id}')">💾 Sauvegarder les modifications</button>
+                        <button class="btn-submit btn-delete" onclick="deleteSchedule('${schedule._id}')">🗑️ Supprimer cet emploi</button>
+                    </div>
+                `;
+                listDiv.appendChild(item);
             });
         } catch (err) {
             console.error("Erreur de chargement :", err);
+            alert('Erreur lors du chargement des données.');
         }
-    });
+    }
 
-    async function saveSchedule(event) {
-        event.preventDefault();
-
-        const className = document.getElementById('className').value;
-        const teacherName = document.getElementById('teacherName').value;
-        const subject = document.getElementById('subject').value;
-        const phone = document.getElementById('phone').value;
-
-        const schedule = {};
-        days.forEach(day => {
-            schedule[day] = {};
+    // Mettre à jour un emploi
+    async function updateSchedule(id) {
+        try {
+            const res = await fetch(API_BASE_URL + `/api/schedules/${id}`);
+            const schedule = await res.json();
+            
+            // Récupérer les nouvelles valeurs du formulaire
+            const newSchedule = { ...schedule };
+            
             hours.forEach(hour => {
-                const input = document.querySelector(`input[name="${day}_${hour}"]`);
-                if (input && !input.disabled) {
-                    schedule[day][hour] = input.value;
-                }
+                if (!newSchedule.schedule) newSchedule.schedule = {};
+                days.forEach(day => {
+                    if (!newSchedule.schedule[day]) newSchedule.schedule[day] = {};
+                    const input = document.getElementById(`edit-${id}-${day}-${hour}`);
+                    if (input) {
+                        newSchedule.schedule[day][hour] = input.value;
+                    }
+                });
             });
-        });
 
-        const payload = { className, teacherName, subject, phone, schedule };
+            const updateRes = await fetch(API_BASE_URL + `/api/schedules/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSchedule)
+            });
+
+            if (updateRes.ok) {
+                alert('Emploi du temps mis à jour avec succès !');
+                loadSchedules();
+            } else {
+                alert('Erreur lors de la modification.');
+            }
+        } catch (err) {
+            alert('Impossible de sauvegarder.');
+        }
+    }
+
+    // Supprimer un emploi
+    async function deleteSchedule(id) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cet emploi du temps ?')) return;
 
         try {
-            const res = await fetch(API_BASE_URL + '/api/schedules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
+            const res = await fetch(API_BASE_URL + `/api/schedules/${id}`, {
+                method: 'DELETE'
             });
 
             if (res.ok) {
-                alert('Emploi du temps enregistré avec succès !');
-                location.reload();
+                alert('Emploi du temps supprimé !');
+                loadSchedules();
             } else {
-                const errData = await res.json();
-                alert('Erreur : ' + (errData.error || "Erreur lors de l'enregistrement."));
+                alert('Erreur lors de la suppression.');
             }
         } catch (err) {
-            console.error(err);
-            alert('Impossible de contacter le serveur.');
+            alert('Impossible de supprimer.');
         }
     }
+
+    // Charger au démarrage
+    loadSchedules();
 </script>
 
 </body>
