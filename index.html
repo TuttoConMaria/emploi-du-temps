@@ -21,6 +21,7 @@
         th, td { border: 1px solid #ddd; text-align: center; padding: 6px; font-size: 13px; }
         th { background-color: #3b5998; color: white; }
         td input { width: 90%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
+        td input:disabled { background-color: #e2e8f0; color: #666; font-weight: bold; cursor: not-allowed; }
         
         .actions { text-align: center; margin-top: 25px; }
         .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
@@ -43,7 +44,7 @@
             <div class="form-grid">
                 <div class="form-group">
                     <label for="className">Classe :</label>
-                    <select id="className" required>
+                    <select id="className" required onchange="loadOccupiedHours()">
                         <option value="">-- Choisir la classe --</option>
                         <option value="SECONDE F3">SECONDE F3</option>
                         <option value="SECONDE F4">SECONDE F4</option>
@@ -87,7 +88,6 @@
             <button type="submit" class="btn-submit">Enregistrer l'emploi du temps</button>
         </div>
 
-        <!-- Signature officielle -->
         <div class="signature-section">
             <p style="font-size: 14px; margin-bottom: 5px;">Fait à Bohicon, le .........................</p>
             <p style="font-weight: bold; font-size: 14px; color: #1a365d; margin-bottom: 50px;">Le Directeur Administratif et Financier,</p>
@@ -120,6 +120,40 @@
 
     buildTable();
 
+    async function loadOccupiedHours() {
+        const selectedClass = document.getElementById('className').value;
+        buildTable();
+
+        if (!selectedClass) return;
+
+        try {
+            const res = await fetch(API_BASE_URL + '/api/schedules');
+            const allSchedules = await res.json();
+            const classSchedules = allSchedules.filter(s => s.className === selectedClass);
+
+            classSchedules.forEach(item => {
+                if (item.schedule) {
+                    for (const day in item.schedule) {
+                        for (const hour in item.schedule[day]) {
+                            const val = item.schedule[day][hour];
+                            if (val && val.trim() !== '') {
+                                const input = document.querySelector(`input[name="${day}_${hour}"]`);
+                                if (input) {
+                                    input.value = `${item.teacherName} (${val})`;
+                                    input.style.backgroundColor = '#e2e8f0';
+                                    input.style.fontWeight = 'bold';
+                                    input.disabled = true;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        } catch (err) {
+            console.error("Erreur :", err);
+        }
+    }
+
     async function saveSchedule(event) {
         event.preventDefault();
 
@@ -133,7 +167,7 @@
             schedule[day] = {};
             hours.forEach(hour => {
                 const input = document.querySelector(`input[name="${day}_${hour}"]`);
-                if (input) {
+                if (input && !input.disabled) {
                     schedule[day][hour] = input.value;
                 }
             });
