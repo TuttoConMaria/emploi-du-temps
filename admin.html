@@ -49,12 +49,9 @@
         .signature-section { margin-top: 30px; float: right; text-align: center; min-width: 280px; }
         .clear-float { clear: both; }
 
-        @media print {
-            body * { visibility: hidden; }
-            .printable-class, .printable-class * { visibility: visible; }
-            .printable-class { position: absolute; left: 0; top: 0; width: 100%; }
-            .btn-action-cell, .cell-input, .cell-prof, .btn-print-class { display: none !important; }
-        }
+        /* Classe utilitaire pour cacher les éléments d'administration lors de la génération du PDF */
+        .pdf-hidden { display: none !important; }
+        .pdf-text-only { display: none; font-size: 12px; font-weight: bold; color: #333; }
     </style>
 </head>
 <body>
@@ -241,6 +238,22 @@
 
     function printClassPDF(sectionId, className) {
         const element = document.getElementById(sectionId);
+        
+        // Sélectionner et masquer temporairement les boutons et les inputs de modification pour le PDF
+        const btnPrint = element.querySelector('.btn-print-class');
+        const actionsCells = element.querySelectorAll('.btn-action-cell');
+        const inputs = element.querySelectorAll('.cell-input, .cell-prof');
+
+        if (btnPrint) btnPrint.style.display = 'none';
+        actionsCells.forEach(el => el.style.display = 'none');
+        
+        // Transformer temporairement les inputs en simple texte propre pour l'export PDF
+        inputs.forEach(input => {
+            input.style.border = 'none';
+            input.style.background = 'transparent';
+            input.style.fontWeight = 'bold';
+        });
+
         const opt = {
             margin: 10,
             filename: `emploi_du_temps_${className.replace(/\s+/g, '_')}.pdf`,
@@ -248,7 +261,17 @@
             html2canvas: { scale: 2 },
             jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
         };
-        html2pdf().set(opt).from(element).save();
+
+        html2pdf().set(opt).from(element).save().then(() => {
+            // Remettre l'affichage normal après le téléchargement
+            if (btnPrint) btnPrint.style.display = 'block';
+            actionsCells.forEach(el => el.style.display = 'flex');
+            inputs.forEach(input => {
+                input.style.border = '1px solid #ccc';
+                input.style.background = input.classList.contains('cell-prof') ? '#fafafa' : 'white';
+                input.style.fontWeight = 'normal';
+            });
+        });
     }
 
     if (isLoggedIn()) {
