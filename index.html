@@ -98,6 +98,7 @@
 </div>
 
 <script>
+    const API_BASE_URL = 'https://cpet-joseph.onrender.com';
     const hours = [
         '07h00 - 08h00', '08h00 - 09h00', '09h00 - 10h00',
         '10h00 - 11h00', '11h00 - 12h00', '12h00 - 13h00',
@@ -127,7 +128,7 @@
         if (!selectedClass) return;
 
         try {
-            const res = await fetch('/api/schedules');
+            const res = await fetch(API_BASE_URL + '/api/schedules');
             const allSchedules = await res.json();
             const classSchedules = allSchedules.filter(s => s.className === selectedClass);
 
@@ -142,7 +143,7 @@
                                     input.value = `${item.teacherName} (${val})`;
                                     input.style.backgroundColor = '#e2e8f0';
                                     input.style.fontWeight = 'bold';
-                                    input.disabled = true; // Empêche de modifier un cours existant
+                                    input.disabled = true;
                                 }
                             }
                         }
@@ -176,7 +177,7 @@
         const payload = { className, teacherName, subject, phone, schedule };
 
         try {
-            const res = await fetch('/api/schedules', {
+            const res = await fetch(API_BASE_URL + '/api/schedules', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
