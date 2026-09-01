@@ -278,61 +278,82 @@
         });
     }
 
-    async function saveCell(className, day, hour) {
-        const subject = document.getElementById(`subj_${className}_${day}_${hour}`).value;
-        const teacherName = document.getElementById(`prof_${className}_${day}_${hour}`).value;
-        const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
+  async function saveCell(className, day, hour) {
+    const subjectEl = document.getElementById(`subj_${className}_${day}_${hour}`);
+    const profEl = document.getElementById(`prof_${className}_${day}_${hour}`);
+    const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
 
-        if (teacherName && teacherName.trim() !== '' && subject && subject.trim() !== '') {
-            let conflictFound = false;
-            let conflictClass = '';
+    const subject = subjectEl ? subjectEl.value.trim() : '';
+    const teacherName = profEl ? profEl.value.trim() : '';
 
-            globalSchedulesData.forEach(sched => {
-                if (sched.className !== className && sched.teacherName && sched.teacherName.toLowerCase() === teacherName.toLowerCase()) {
-                    if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
-                        conflictFound = true;
-                        conflictClass = sched.className;
+    let conflitTrouve = false;
+    let conflitClasse = '';
+
+    if (teacherName !== '' && subject !== '') {
+        if (typeof globalSchedulesData !== 'undefined') {
+            globalSchedulesData.forEach(planning => {
+                if (planning.className !== className && planning.teacherName === teacherName) {
+                    if (planning.schedule && planning.schedule[day] && planning.schedule[day][hour]) {
+                        if (planning.schedule[day][hour].trim() !== '') {
+                            conflitTrouve = true;
+                            conflitClasse = planning.className;
+                        }
                     }
                 }
             });
-
-            if (conflictFound) {
-                const confirmConflict = confirm(`⚠️ Attention : L'enseignant "${teacherName}" est déjà programmé dans la classe "${conflictClass}" sur ce même créneau (${day} à ${hour}). S'agit-il d'un cours commun (tronc commun) ?`);
-                if (!confirmConflict) return;
-            }
         }
 
-        const oldText = btn.textContent;
-        btn.textContent = '...';
+        if (conflitTrouve) {
+            alert(`Attention : Le professeur ${teacherName} a déjà cours dans la classe ${conflitClasse} à cette heure !`);
+        }
+    }
+
+    if (btn) {
+        btn.textContent = 'Enregistrement...';
         btn.disabled = true;
+    }
 
-        try {
-            const res = await fetch(API_BASE_URL + '/api/schedules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    className: className,
-                    teacherName: teacherName || 'Non spécifié',
-                    subject: subject,
-                    schedule: { [day]: { [hour]: subject } }
-                })
-            });
+    try {
+        const res = await fetch(API_BASE_URL + '/api/schedules', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                className: className,
+                teacherName: teacherName || 'Non spécifié',
+                subject: subject,
+                schedule: {
+                    [day]: {
+                        [hour]: subject
+                    }
+                }
+            })
+        });
 
-            if (res.ok) {
-                btn.textContent = 'OK !';
-                setTimeout(() => { loadSchedules(); }, 500);
-            } else {
-                alert('Erreur lors de la modification.');
-                btn.textContent = oldText;
+        if (res.ok) {
+            if (btn) {
+                btn.textContent = 'Enregistré !';
+                setTimeout(() => {
+                    btn.textContent = 'Enregistrer';
+                    btn.disabled = false;
+                }, 1500);
+            }
+            loadSchedules();
+        } else {
+            alert('Erreur lors de la sauvegarde sur le serveur.');
+            if (btn) {
+                btn.textContent = 'Enregistrer';
                 btn.disabled = false;
             }
-        } catch (err) {
-            console.error(err);
-            alert('Impossible de contacter le serveur.');
-            btn.textContent = oldText;
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Impossible de contacter le serveur.');
+        if (btn) {
+            btn.textContent = 'Enregistrer';
             btn.disabled = false;
         }
     }
+}
 
      async function deleteCell(className, day, hour) {
         if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
