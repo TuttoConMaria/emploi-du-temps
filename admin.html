@@ -334,13 +334,35 @@
         }
     }
 
-    async function deleteCell(className, day, hour) {
+     async function deleteCell(className, day, hour) {
         if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
 
         document.getElementById(`subj_${className}_${day}_${hour}`).value = '';
         document.getElementById(`prof_${className}_${day}_${hour}`).value = '';
-        saveCell(className, day, hour);
+
+        try {
+            const res = await fetch(API_BASE_URL + '/api/schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    className: className,
+                    teacherName: 'Non spécifié',
+                    subject: '',
+                    schedule: { [day]: { [hour]: '' } }
+                })
+            });
+
+            if (res.ok) {
+                loadSchedules();
+            } else {
+                alert('Erreur lors de la suppression sur le serveur.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Impossible de contacter le serveur.');
+        }
     }
+
 
     function printClassPDF(sectionId, className) {
         const element = document.getElementById(sectionId);
