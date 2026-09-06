@@ -5,8 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Saisie Emploi du Temps - CPET CATHOLIQUE SAINT JOSEPH BOHICON</title>
     <style>
-        body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 20px; }
-        .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        /* MODIFICATIONS CSS POUR L'ARRIERE-PLAN */
+        body { 
+            font-family: Arial, sans-serif; 
+            /* Couleur de fond de secours avant chargement image */
+            background-color: #f4f6f8; 
+            margin: 20px; 
+            /* Ajout de l'image en arrière-plan */
+            background-image: url('image_0.png'); 
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            /* Superposition d'une couleur pour l'effet de transparence */
+            position: relative;
+        }
+
+        /* Pseudo-élément pour gérer l'opacité de l'image de fond uniquement */
+        body::before {
+            content: "";
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            /* Image de fond avec opacité très faible (0.1) */
+            background-image: url('image_0.png');
+            background-size: cover;
+            background-position: center;
+            opacity: 0.1; /* Transparence de l'image */
+            z-index: -1; /* Place l'image derrière tout le contenu */
+        }
+
+        .container { 
+            max-width: 1100px; 
+            margin: 0 auto; 
+            /* Fond du formulaire : Blanc avec une très légère transparence (0.95) 
+               pour laisser deviner l'image tout en gardant une excellente lisibilité */
+            background-color: rgba(255, 255, 255, 0.95); 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); /* Ombre portée renforcée pour le contraste */
+            position: relative;
+            z-index: 1;
+        }
+        /* FIN DES MODIFICATIONS CSS */
+
         .header { text-align: center; border-bottom: 2px solid #3b5998; padding-bottom: 15px; margin-bottom: 25px; }
         .header h1 { margin: 0; color: #1a365d; font-size: 24px; text-transform: uppercase; }
         .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: normal; }
