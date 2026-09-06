@@ -214,11 +214,13 @@
                 days.forEach(day => {
                     let currentSubj = '';
                     let currentProf = '';
+                    let currentId = '';
                     
                     classSchedules.forEach(sched => {
                         if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
                             currentSubj = sched.schedule[day][hour];
                             currentProf = sched.teacherName || '';
+                            currentId = sched._id || '';
                         }
                     });
 
@@ -234,8 +236,8 @@
 
                     tableHTML += `<td style="${cellHighlight}">
                         <div class="cell-content">
-                            <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
-                            <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
+                            <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière" data-id="${currentId}">
+                            <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant" data-id="${currentId}">
                             <div class="btn-action-cell">
                                 <button class="btn-save-cell" id="btn_save_${className}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Mod</button>
                                 <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supp</button>
@@ -278,102 +280,129 @@
         });
     }
 
-  async function saveCell(className, day, hour) {
-    const subjectEl = document.getElementById(`subj_${className}_${day}_${hour}`);
-    const profEl = document.getElementById(`prof_${className}_${day}_${hour}`);
-    const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
+    async function saveCell(className, day, hour) {
+        const subjectEl = document.getElementById(`subj_${className}_${day}_${hour}`);
+        const profEl = document.getElementById(`prof_${className}_${day}_${hour}`);
+        const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
 
-    const subject = subjectEl ? subjectEl.value.trim() : '';
-    const teacherName = profEl ? profEl.value.trim() : '';
+        const subject = subjectEl ? subjectEl.value.trim() : '';
+        const teacherName = profEl ? profEl.value.trim() : '';
+        const documentId = subjectEl ? subjectEl.getAttribute('data-id') : '';
 
-    let conflitTrouve = false;
-    let conflitClasse = '';
+        let conflitTrouve = false;
+        let conflitClasse = '';
 
-    if (teacherName !== '' && subject !== '') {
-        if (typeof globalSchedulesData !== 'undefined') {
-            globalSchedulesData.forEach(planning => {
-                if (planning.className !== className && planning.teacherName === teacherName) {
-                    if (planning.schedule && planning.schedule[day] && planning.schedule[day][hour]) {
-                        if (planning.schedule[day][hour].trim() !== '') {
-                            conflitTrouve = true;
-                            conflitClasse = planning.className;
+        if (teacherName !== '' && subject !== '') {
+            if (typeof globalSchedulesData !== 'undefined') {
+                globalSchedulesData.forEach(planning => {
+                    if (planning.className !== className && planning.teacherName === teacherName) {
+                        if (planning.schedule && planning.schedule[day] && planning.schedule[day][hour]) {
+                            if (planning.schedule[day][hour].trim() !== '') {
+                                conflitTrouve = true;
+                                conflitClasse = planning.className;
+                            }
                         }
                     }
-                }
-            });
-        }
-
-        if (conflitTrouve) {
-            alert(`Attention : Le professeur ${teacherName} a déjà cours dans la classe ${conflitClasse} à cette heure !`);
-        }
-    }
-
-    if (btn) {
-        btn.textContent = 'Enregistrement...';
-        btn.disabled = true;
-    }
-
-    try {
-        const res = await fetch(API_BASE_URL + '/api/schedules', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                className: className,
-                teacherName: teacherName || 'Non spécifié',
-                subject: subject,
-                schedule: {
-                    [day]: {
-                        [hour]: subject
-                    }
-                }
-            })
-        });
-
-        if (res.ok) {
-            if (btn) {
-                btn.textContent = 'Enregistré !';
-                setTimeout(() => {
-                    btn.textContent = 'Enregistrer';
-                    btn.disabled = false;
-                }, 1500);
+                });
             }
-            loadSchedules();
-        } else {
-            alert('Erreur lors de la sauvegarde sur le serveur.');
+
+            if (conflitTrouve) {
+                alert(`Attention : Le professeur ${teacherName} a déjà cours dans la classe ${conflitClasse} à cette heure !`);
+            }
+        }
+
+        if (btn) {
+            btn.textContent = 'Enregistrement...';
+            btn.disabled = true;
+        }
+
+        try {
+            let res;
+
+            // Si un document existe (a un ID), utiliser PUT pour modifier
+            if (documentId && documentId !== '') {
+                res = await fetch(API_BASE_URL + '/api/schedules/' + documentId, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        className: className,
+                        teacherName: teacherName || 'Non spécifié',
+                        subject: subject,
+                        schedule: {
+                            [day]: {
+                                [hour]: subject
+                            }
+                        }
+                    })
+                });
+            } else {
+                // Sinon, créer un nouveau document avec POST
+                res = await fetch(API_BASE_URL + '/api/schedules', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        className: className,
+                        teacherName: teacherName || 'Non spécifié',
+                        subject: subject,
+                        schedule: {
+                            [day]: {
+                                [hour]: subject
+                            }
+                        }
+                    })
+                });
+            }
+
+            if (res.ok) {
+                if (btn) {
+                    btn.textContent = 'Enregistré !';
+                    setTimeout(() => {
+                        btn.textContent = 'Mod';
+                        btn.disabled = false;
+                    }, 1500);
+                }
+                loadSchedules();
+            } else {
+                alert('Erreur lors de la sauvegarde sur le serveur.');
+                if (btn) {
+                    btn.textContent = 'Mod';
+                    btn.disabled = false;
+                }
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Impossible de contacter le serveur.');
             if (btn) {
-                btn.textContent = 'Enregistrer';
+                btn.textContent = 'Mod';
                 btn.disabled = false;
             }
         }
-    } catch (err) {
-        console.error(err);
-        alert('Impossible de contacter le serveur.');
-        if (btn) {
-            btn.textContent = 'Enregistrer';
-            btn.disabled = false;
-        }
     }
-}
 
-     async function deleteCell(className, day, hour) {
+    async function deleteCell(className, day, hour) {
         if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
+
+        const subjectEl = document.getElementById(`subj_${className}_${day}_${hour}`);
+        const documentId = subjectEl ? subjectEl.getAttribute('data-id') : '';
+
+        // Si pas d'ID, il n'y a rien à supprimer
+        if (!documentId || documentId === '') {
+            alert('Aucun cours à supprimer.');
+            return;
+        }
 
         document.getElementById(`subj_${className}_${day}_${hour}`).value = '';
         document.getElementById(`prof_${className}_${day}_${hour}`).value = '';
 
         try {
-            const res = await fetch(API_BASE_URL + '/api/schedules', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    className: className,
-                    teacherName: 'Non spécifié',
-                    subject: '',
-                    schedule: { [day]: { [hour]: '' } }
-                })
+            // Utiliser DELETE avec l'ID MongoDB
+            const res = await fetch(API_BASE_URL + '/api/schedules/' + documentId, {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' }
             });
 
             if (res.ok) {
+                alert('Cours supprimé avec succès');
                 loadSchedules();
             } else {
                 alert('Erreur lors de la suppression sur le serveur.');
@@ -447,4 +476,3 @@
 
 </body>
 </html>
-
