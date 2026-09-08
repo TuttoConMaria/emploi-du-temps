@@ -3,25 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestion Emploi du Temps - CPET CATHOLIQUE SAINT JOSEPH BOHICON</title>
     <title>Saisie Emploi du Temps - CPET CATHOLIQUE SAINT JOSEPH BOHICON</title>
     <style>
         body { font-family: Arial, sans-serif; background-color: #f4f6f8; margin: 20px; }
+        .container { max-width: 1200px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .container { max-width: 1100px; margin: 0 auto; background: white; padding: 30px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .header { text-align: center; border-bottom: 2px solid #3b5998; padding-bottom: 15px; margin-bottom: 25px; }
         .header h1 { margin: 0; color: #1a365d; font-size: 24px; text-transform: uppercase; }
         .header h2 { margin: 5px 0 0 0; color: #2c3e50; font-size: 18px; font-weight: normal; }
+
+        .actions { text-align: center; margin-bottom: 25px; }
+        .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; margin: 5px; }
+        .btn-submit:hover { background-color: #2c3e50; }
+        .btn-delete { background-color: #dc3545; }
+        .btn-delete:hover { background-color: #c82333; }
+        .btn-save { background-color: #28a745; }
+        .btn-save:hover { background-color: #218838; }
         
+        .schedule-list { margin-top: 20px; }
+        .schedule-item { background: #f9f9f9; padding: 20px; margin-bottom: 25px; border-radius: 6px; border-left: 4px solid #3b5998; }
+        .schedule-item h3 { margin: 0 0 15px 0; color: #1a365d; font-size: 18px; }
+        .schedule-item p { margin: 5px 0; font-size: 14px; }
+        .schedule-info { background: white; padding: 10px; margin-bottom: 15px; border-radius: 4px; }
         .form-section { background: #eef2f7; padding: 20px; border-radius: 6px; margin-bottom: 25px; }
         .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; }
         .form-group { display: flex; flex-direction: column; }
         .form-group label { font-weight: bold; margin-bottom: 5px; color: #1a365d; }
         .form-group input, .form-group select { padding: 8px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
-        
+
+        table { width: 100%; border-collapse: collapse; margin: 15px 0; }
+        th, td { border: 1px solid #ddd; text-align: center; padding: 8px; font-size: 13px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { border: 1px solid #ddd; text-align: center; padding: 6px; font-size: 13px; }
         th { background-color: #3b5998; color: white; }
+        td input { width: 95%; padding: 6px; border: 1px solid #ddd; border-radius: 3px; text-align: center; font-size: 12px; }
         td input { width: 90%; padding: 4px; border: 1px solid #ddd; border-radius: 3px; text-align: center; }
-        
+
+        .schedule-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .schedule-actions button { padding: 10px 20px; font-size: 14px; flex: 1; }
         .actions { text-align: center; margin-top: 25px; }
         .btn-submit { background-color: #3b5998; color: white; padding: 12px 30px; font-size: 16px; font-weight: bold; border: none; border-radius: 4px; cursor: pointer; }
         .btn-submit:hover { background-color: #2c3e50; }
@@ -35,9 +55,15 @@
 <div class="container">
     <div class="header">
         <h1>CPET CATHOLIQUE SAINT JOSEPH BOHICON</h1>
+        <h2>Gestion des emplois du temps</h2>
         <h2>Saisie de l'emploi du temps</h2>
     </div>
 
+    <div class="actions">
+        <button class="btn-submit" onclick="loadSchedules()">🔄 Actualiser</button>
+    </div>
+
+    <div class="schedule-list" id="scheduleList"></div>
     <form id="scheduleForm" onsubmit="saveSchedule(event)">
         <div class="form-section">
             <div class="form-grid">
@@ -98,11 +124,7 @@
 </div>
 
 <script>
-    const API_BASE_URL = 'https://cpet-joseph.onrender.com';
-    const hours = [
-        '07h00 - 08h00', '08h00 - 09h00', '09h00 - 10h00',
-        '10h00 - 11h00', '11h00 - 12h00', '12h00 - 13h00',
-        '13h00 - 14h00', '14h00 - 15h00', '15h00 - 16h00',
+@@ -58,120 +106,60 @@
         '16h00 - 17h00', '17h00 - 18h00', '18h00 - 19h00'
     ];
     const days = ['lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi'];
@@ -118,11 +140,72 @@
         });
     }
 
+    // Charger et afficher tous les emplois
+    async function loadSchedules() {
+        try {
+            const res = await fetch(API_BASE_URL + '/api/schedules');
+            const schedules = await res.json();
+            
+            const listDiv = document.getElementById('scheduleList');
+            listDiv.innerHTML = '';
+
+            if (schedules.length === 0) {
+                listDiv.innerHTML = '<p style="text-align:center; color:#999; padding:20px;">Aucun emploi du temps enregistré.</p>';
+                return;
+            }
     buildTable();
 
+            schedules.forEach(schedule => {
+                const item = document.createElement('div');
+                item.className = 'schedule-item';
+                
+                let tableHTML = '<table><thead><tr><th>Horaires</th>';
+                days.forEach(day => tableHTML += `<th>${day.charAt(0).toUpperCase() + day.slice(1)}</th>`);
+                tableHTML += '</tr></thead><tbody>';
+                
+                hours.forEach(hour => {
+                    tableHTML += `<tr><td style="font-weight:bold;">${hour}</td>`;
+                    days.forEach(day => {
+                        const value = schedule.schedule && schedule.schedule[day] && schedule.schedule[day][hour] ? schedule.schedule[day][hour] : '';
+                        tableHTML += `<td><input type="text" id="edit-${schedule._id}-${day}-${hour}" value="${value}"></td>`;
+                    });
+                    tableHTML += '</tr>';
+                });
+                
+                tableHTML += '</tbody></table>';
+
+                item.innerHTML = `
+                    <h3>${schedule.className} - ${schedule.teacherName}</h3>
+                    <div class="schedule-info">
+                        <p><strong>Matière :</strong> ${schedule.subject}</p>
+                        <p><strong>Téléphone :</strong> ${schedule.phone || 'Non fourni'}</p>
+                    </div>
+                    <p style="font-size: 12px; color: #666;"><em>Cliquez sur les heures pour modifier, puis cliquez "Sauvegarder"</em></p>
+                    ${tableHTML}
+                    <div class="schedule-actions">
+                        <button class="btn-submit btn-save" onclick="updateSchedule('${schedule._id}')">💾 Sauvegarder les modifications</button>
+                        <button class="btn-submit btn-delete" onclick="deleteSchedule('${schedule._id}')">🗑️ Supprimer cet emploi</button>
+                    </div>
+                `;
+                listDiv.appendChild(item);
+            });
+        } catch (err) {
+            console.error("Erreur de chargement :", err);
+            alert('Erreur lors du chargement des données.');
+        }
+    }
     async function saveSchedule(event) {
         event.preventDefault();
 
+    // Mettre à jour un emploi
+    async function updateSchedule(id) {
+        try {
+            const res = await fetch(API_BASE_URL + `/api/schedules/${id}`);
+            const schedule = await res.json();
+            
+            // Récupérer les nouvelles valeurs du formulaire
+            const newSchedule = { ...schedule };
+            
         const className = document.getElementById('className').value;
         const teacherName = document.getElementById('teacherName').value;
         const subject = document.getElementById('subject').value;
@@ -132,6 +215,14 @@
         days.forEach(day => {
             schedule[day] = {};
             hours.forEach(hour => {
+                if (!newSchedule.schedule) newSchedule.schedule = {};
+                days.forEach(day => {
+                    if (!newSchedule.schedule[day]) newSchedule.schedule[day] = {};
+                    const input = document.getElementById(`edit-${id}-${day}-${hour}`);
+                    if (input) {
+                        newSchedule.schedule[day][hour] = input.value;
+                    }
+                });
                 const input = document.querySelector(`input[name="${day}_${hour}"]`);
                 if (input) {
                     schedule[day][hour] = input.value;
@@ -139,9 +230,31 @@
             });
         });
 
+            const updateRes = await fetch(API_BASE_URL + `/api/schedules/${id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(newSchedule)
+            });
+
+            if (updateRes.ok) {
+                alert('Emploi du temps mis à jour avec succès !');
+                loadSchedules();
+            } else {
+                alert('Erreur lors de la modification.');
+            }
+        } catch (err) {
+            alert('Impossible de sauvegarder.');
+        }
+    }
+
+    // Supprimer un emploi
+    async function deleteSchedule(id) {
+        if (!confirm('Êtes-vous sûr de vouloir supprimer cet emploi du temps ?')) return;
         const payload = { className, teacherName, subject, phone, schedule };
 
         try {
+            const res = await fetch(API_BASE_URL + `/api/schedules/${id}`, {
+                method: 'DELETE'
             const res = await fetch(API_BASE_URL + '/api/schedules', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -149,18 +262,24 @@
             });
 
             if (res.ok) {
+                alert('Emploi du temps supprimé !');
+                loadSchedules();
                 alert('Emploi du temps enregistré avec succès !');
                 document.getElementById('scheduleForm').reset();
                 buildTable();
             } else {
+                alert('Erreur lors de la suppression.');
                 alert('Erreur lors de l\'enregistrement.');
             }
         } catch (err) {
+            alert('Impossible de supprimer.');
             console.error(err);
             alert('Impossible de contacter le serveur.');
         }
     }
+
+    // Charger au démarrage
+    loadSchedules();
 </script>
 
 </body>
-</html>
