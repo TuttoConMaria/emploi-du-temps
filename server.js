@@ -31,6 +31,8 @@ const scheduleSchema = new mongoose.Schema({
 
 const Schedule = mongoose.model('Schedule', scheduleSchema);
 
+// ==================== ROUTES ====================
+
 // GET - Récupérer tous les emplois du temps
 app.get('/api/schedules', async (req, res) => {
     try {
@@ -103,17 +105,7 @@ app.put('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// DELETE - Supprimer un emploi entier par ID
-app.delete('/api/schedules/:id', async (req, res) => {
-    try {
-        await Schedule.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Supprimé avec succès' });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-// DELETE - Supprimer un créneau spécifique
+// DELETE - Supprimer un créneau spécifique (AVANT le :id)
 app.delete('/api/schedules/cell', async (req, res) => {
     try {
         const { className, day, hour } = req.body;
@@ -143,11 +135,22 @@ app.delete('/api/schedules/cell', async (req, res) => {
     }
 });
 
+// DELETE - Supprimer un emploi entier par ID (APRÈS le /cell)
+app.delete('/api/schedules/:id', async (req, res) => {
+    try {
+        await Schedule.findByIdAndDelete(req.params.id);
+        res.json({ message: 'Supprimé avec succès' });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
 // Servir le fichier HTML principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
+// Gestion des routes non trouvées
 app.use((req, res) => {
     res.status(404).json({ message: 'Route non trouvée' });
 });
