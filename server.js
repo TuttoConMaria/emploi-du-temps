@@ -21,7 +21,7 @@ const scheduleSchema = new mongoose.Schema({
     teacherName: String,
     subject: String,
     phone: String,
-    schedule: Object,
+    schedule: mongoose.Schema.Types.Mixed,
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now }
 });
@@ -58,16 +58,7 @@ app.post('/api/schedules', async (req, res) => {
             if (teacherName) scheduleDoc.teacherName = teacherName;
             if (subject) scheduleDoc.subject = subject;
             if (schedule) {
-                Object.keys(schedule).forEach(day => {
-                    if (!scheduleDoc.schedule[day]) {
-                        scheduleDoc.schedule[day] = {};
-                    }
-                    Object.keys(schedule[day]).forEach(hour => {
-                        if (schedule[day][hour] && schedule[day][hour].trim() !== '') {
-                            scheduleDoc.schedule[day][hour] = schedule[day][hour];
-                        }
-                    });
-                });
+                scheduleDoc.schedule = { ...scheduleDoc.schedule, ...schedule };
             }
         }
 
@@ -113,22 +104,22 @@ app.delete('/api/schedules/cell', async (req, res) => {
             return res.status(400).json({ message: 'className, day et hour sont requis' });
         }
 
-        const scheduleDoc = await Schedule.findOne({ className });
-        if (!scheduleDoc) {
+        const unsetPath = `schedule.${day}.${hour}`;
+        
+        const updatedSchedule = await Schedule.findOneAndUpdate(
+            { className: className },
+            { $unset: { [unsetPath]: "" } },
+            { new: true }
+        );
+
+        if (!updatedSchedule) {
             return res.status(404).json({ message: 'Classe non trouvée' });
         }
 
-        if (scheduleDoc.schedule && scheduleDoc.schedule[day] && scheduleDoc.schedule[day][hour]) {
-            delete scheduleDoc.schedule[day][hour];
-            
-            if (Object.keys(scheduleDoc.schedule[day]).length === 0) {
-                delete scheduleDoc.schedule[day];
-            }
-        }
+        updatedSchedule.updatedAt = new Date();
+        await updatedSchedule.save();
 
-        scheduleDoc.updatedAt = new Date();
-        await scheduleDoc.save();
-        res.json({ message: 'Créneau supprimé avec succès' });
+        res.json({ message: 'Créneau supprimé avec succès', data: updatedSchedule });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
