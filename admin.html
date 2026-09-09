@@ -174,7 +174,6 @@
         
         const teachersSet = new Set();
         
-        // Parcourir les données globales de l'API pour extraire tous les professeurs renseignés
         globalSchedulesData.forEach(s => {
             if (s.teacherName && s.teacherName !== 'Non spécifié' && s.teacherName.trim() !== '') {
                 teachersSet.add(s.teacherName.trim());
@@ -183,7 +182,6 @@
                 Object.values(s.schedule).forEach(dayObj => {
                     if (dayObj) {
                         Object.values(dayObj).forEach(cellContent => {
-                            // Support de rétrocompatibilité si la cellule contient directement un objet ou du texte
                             if (typeof cellContent === 'object' && cellContent !== null && cellContent.teacherName) {
                                 if (cellContent.teacherName.trim() !== '') teachersSet.add(cellContent.teacherName.trim());
                             }
@@ -193,7 +191,6 @@
             }
         });
 
-        // S'assurer aussi de récupérer les profs depuis les inputs du DOM s'ils sont affichés
         document.querySelectorAll('.cell-prof').forEach(input => {
             if (input.value && input.value.trim() !== '' && input.value.trim() !== 'Non spécifié') {
                 teachersSet.add(input.value.trim());
@@ -306,7 +303,6 @@
             listDiv.appendChild(section);
         });
 
-        // Mettre à jour la liste déroulante des profs après le rendu complet
         updateTeacherDropdown();
     }
 
@@ -386,6 +382,7 @@
         actionsCells.forEach(el => el.style.display = 'none');
         
         subjectInputs.forEach(input => {
+            input.setAttribute('value', input.value); // Force la capture du texte saisi dans les inputs
             input.style.border = 'none';
             input.style.background = 'transparent';
             input.style.fontWeight = 'bold';
@@ -393,6 +390,7 @@
         });
 
         profInputs.forEach(input => {
+            input.setAttribute('value', input.value); // Force la capture du texte saisi dans les inputs
             input.style.border = 'none';
             input.style.background = 'transparent';
             input.style.fontWeight = 'normal';
@@ -407,7 +405,6 @@
             jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
         };
 
-        // Délai de 250ms pour garantir le rendu visuel complet avant capture par html2pdf
         setTimeout(() => {
             html2pdf().set(opt).from(element).save().then(() => {
                 if (btnPrint) btnPrint.style.display = 'block';
