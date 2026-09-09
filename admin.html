@@ -348,7 +348,7 @@
         updateTeacherDropdown();
     }
 
-    async function saveCell(className, day, hour) {
+     async function saveCell(className, day, hour) {
         const classId = className.replace(/\s+/g, '_');
         const subject = document.getElementById(`subj_${classId}_${day}_${hour}`).value;
         const teacherName = document.getElementById(`prof_${classId}_${day}_${hour}`).value;
@@ -359,16 +359,22 @@
             let conflictClass = '';
 
             globalSchedulesData.forEach(sched => {
-                if (sched.className !== className && sched.teacherName && sched.teacherName.toLowerCase() === teacherName.toLowerCase()) {
-                    if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
-                        conflictFound = true;
-                        conflictClass = sched.className;
-                    }
+                if (sched.className !== className && sched.schedule) {
+                    Object.keys(sched.schedule).forEach(d => {
+                        if (d === day && sched.schedule[d] && sched.schedule[d][hour]) {
+                            const cell = sched.schedule[d][hour];
+                            const tName = typeof cell === 'object' ? cell.teacherName : sched.teacherName;
+                            if (tName && tName.toLowerCase() === teacherName.toLowerCase()) {
+                                conflictFound = true;
+                                conflictClass = sched.className;
+                            }
+                        }
+                    });
                 }
             });
 
             if (conflictFound) {
-                const confirmConflict = confirm(`⚠️ Attention : L'enseignant "${teacherName}" est déjà programmé dans la classe "${conflictClass}" sur ce même créneau (${day} à ${hour}). S'agit-il d'un cours commun (tronc commun) ?`);
+                const confirmConflict = confirm(`⚠️ Attention : L'enseignant "${teacherName}" est déjà programmé dans la classe "${conflictClass}" sur ce même créneau (${day} à ${hour}). S'agit-il d'un cours commun ?`);
                 if (!confirmConflict) return;
             }
         }
@@ -384,16 +390,17 @@
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    className: className,
-                    teacherName: teacherName || 'Non spécifié',
-                    subject: subject,
-                    schedule: { [day]: { [hour]: subject } }
+                    className,
+                    day,
+                    hour,
+                    subject,
+                    teacherName: teacherName || 'Non spécifié'
                 })
             });
 
             if (res.ok) {
                 if (btn) btn.textContent = 'OK !';
-                setTimeout(() => { loadSchedules(); }, 500);
+                setTimeout(() => { loadSchedules(); }, 400);
             } else {
                 alert('Erreur lors de la modification.');
                 if (btn) {
@@ -412,32 +419,33 @@
     }
 
     async function deleteCell(className, day, hour) {
-    if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
+        if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
 
-    const classId = className.replace(/\s+/g, '_');
-    const subjInput = document.getElementById(`subj_${classId}_${day}_${hour}`);
-    const profInput = document.getElementById(`prof_${classId}_${day}_${hour}`);
+        const classId = className.replace(/\s+/g, '_');
+        const subjInput = document.getElementById(`subj_${classId}_${day}_${hour}`);
+        const profInput = document.getElementById(`prof_${classId}_${day}_${hour}`);
 
-    if (subjInput) subjInput.value = '';
-    if (profInput) profInput.value = '';
+        if (subjInput) subjInput.value = '';
+        if (profInput) profInput.value = '';
 
-    try {
-        const res = await fetch(API_BASE_URL + '/api/schedules/cell', {
-            method: 'DELETE',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ className, day, hour })
-        });
+        try {
+            const res = await fetch(API_BASE_URL + '/api/schedules/cell', {
+                method: 'DELETE',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ className, day, hour })
+            });
 
-        if (res.ok) {
-            setTimeout(() => { loadSchedules(); }, 300);
-        } else {
-            alert('Erreur lors de la suppression sur le serveur.');
+            if (res.ok) {
+                setTimeout(() => { loadSchedules(); }, 400);
+            } else {
+                alert('Erreur lors de la suppression sur le serveur.');
+            }
+        } catch (err) {
+            console.error(err);
+            alert('Impossible de contacter le serveur pour la suppression.');
         }
-    } catch (err) {
-        console.error(err);
-        alert('Impossible de contacter le serveur pour la suppression.');
     }
-}
+
     function printClassPDF(sectionId) {
         const sectionElement = document.getElementById(sectionId);
         sectionElement.classList.add('class-section-print-target');
