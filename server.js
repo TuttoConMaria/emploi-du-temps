@@ -4,12 +4,10 @@ const cors = require('cors');
 const path = require('path');
 const app = express();
 
-// Middleware
 app.use(cors());
 app.use(express.json());
 app.use(express.static(__dirname));
 
-// Connexion à MongoDB Atlas
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb+srv://tuttoconmaria_db_user:S%40ntos95@cluster0.fruilcf.mongodb.net/?retryWrites=true&w=majority';
 mongoose.connect(MONGODB_URI, {
     useNewUrlParser: true,
@@ -18,7 +16,6 @@ mongoose.connect(MONGODB_URI, {
 .then(() => console.log('✅ Connecté à MongoDB Atlas'))
 .catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
 
-// Définition du modèle de données
 const scheduleSchema = new mongoose.Schema({
     className: String,
     teacherName: String,
@@ -31,9 +28,6 @@ const scheduleSchema = new mongoose.Schema({
 
 const Schedule = mongoose.model('Schedule', scheduleSchema);
 
-// ==================== ROUTES ====================
-
-// GET - Récupérer tous les emplois du temps
 app.get('/api/schedules', async (req, res) => {
     try {
         const schedules = await Schedule.find().sort({ className: 1 });
@@ -43,7 +37,6 @@ app.get('/api/schedules', async (req, res) => {
     }
 });
 
-// POST - Créer ou mettre à jour un emploi (UPSERT)
 app.post('/api/schedules', async (req, res) => {
     try {
         const { className, teacherName, subject, schedule } = req.body;
@@ -65,7 +58,16 @@ app.post('/api/schedules', async (req, res) => {
             if (teacherName) scheduleDoc.teacherName = teacherName;
             if (subject) scheduleDoc.subject = subject;
             if (schedule) {
-                scheduleDoc.schedule = { ...scheduleDoc.schedule, ...schedule };
+                Object.keys(schedule).forEach(day => {
+                    if (!scheduleDoc.schedule[day]) {
+                        scheduleDoc.schedule[day] = {};
+                    }
+                    Object.keys(schedule[day]).forEach(hour => {
+                        if (schedule[day][hour] && schedule[day][hour].trim() !== '') {
+                            scheduleDoc.schedule[day][hour] = schedule[day][hour];
+                        }
+                    });
+                });
             }
         }
 
@@ -77,7 +79,6 @@ app.post('/api/schedules', async (req, res) => {
     }
 });
 
-// GET - Récupérer par ID
 app.get('/api/schedules/:id', async (req, res) => {
     try {
         const schedule = await Schedule.findById(req.params.id);
@@ -88,7 +89,6 @@ app.get('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// PUT - Modifier un emploi par ID
 app.put('/api/schedules/:id', async (req, res) => {
     try {
         const updatedSchedule = await Schedule.findByIdAndUpdate(
@@ -105,7 +105,6 @@ app.put('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// DELETE - Supprimer un créneau spécifique (AVANT le :id)
 app.delete('/api/schedules/cell', async (req, res) => {
     try {
         const { className, day, hour } = req.body;
@@ -119,7 +118,7 @@ app.delete('/api/schedules/cell', async (req, res) => {
             return res.status(404).json({ message: 'Classe non trouvée' });
         }
 
-        if (scheduleDoc.schedule && scheduleDoc.schedule[day]) {
+        if (scheduleDoc.schedule && scheduleDoc.schedule[day] && scheduleDoc.schedule[day][hour]) {
             delete scheduleDoc.schedule[day][hour];
             
             if (Object.keys(scheduleDoc.schedule[day]).length === 0) {
@@ -128,14 +127,13 @@ app.delete('/api/schedules/cell', async (req, res) => {
         }
 
         scheduleDoc.updatedAt = new Date();
-        const savedSchedule = await scheduleDoc.save();
-        res.json({ message: 'Créneau supprimé avec succès', savedSchedule });
+        await scheduleDoc.save();
+        res.json({ message: 'Créneau supprimé avec succès' });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// DELETE - Supprimer un emploi entier par ID (APRÈS le /cell)
 app.delete('/api/schedules/:id', async (req, res) => {
     try {
         await Schedule.findByIdAndDelete(req.params.id);
@@ -145,12 +143,10 @@ app.delete('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// Servir le fichier HTML principal
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-// Gestion des routes non trouvées
 app.use((req, res) => {
     res.status(404).json({ message: 'Route non trouvée' });
 });
