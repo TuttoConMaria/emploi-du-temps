@@ -173,14 +173,35 @@
         const currentSelected = select.value;
         
         const teachersSet = new Set();
+        
+        // Parcourir les données globales de l'API pour extraire tous les professeurs renseignés
         globalSchedulesData.forEach(s => {
             if (s.teacherName && s.teacherName !== 'Non spécifié' && s.teacherName.trim() !== '') {
                 teachersSet.add(s.teacherName.trim());
             }
+            if (s.schedule) {
+                Object.values(s.schedule).forEach(dayObj => {
+                    if (dayObj) {
+                        Object.values(dayObj).forEach(cellContent => {
+                            // Support de rétrocompatibilité si la cellule contient directement un objet ou du texte
+                            if (typeof cellContent === 'object' && cellContent !== null && cellContent.teacherName) {
+                                if (cellContent.teacherName.trim() !== '') teachersSet.add(cellContent.teacherName.trim());
+                            }
+                        });
+                    }
+                });
+            }
+        });
+
+        // S'assurer aussi de récupérer les profs depuis les inputs du DOM s'ils sont affichés
+        document.querySelectorAll('.cell-prof').forEach(input => {
+            if (input.value && input.value.trim() !== '' && input.value.trim() !== 'Non spécifié') {
+                teachersSet.add(input.value.trim());
+            }
         });
 
         select.innerHTML = '<option value="ALL">-- Toutes les classes / Tous --</option>';
-        teachersSet.forEach(prof => {
+        Array.from(teachersSet).sort().forEach(prof => {
             select.innerHTML += `<option value="${prof}">${prof}</option>`;
         });
 
@@ -214,30 +235,36 @@
                 days.forEach(day => {
                     let currentSubj = '';
                     let currentProf = '';
-                    let currentId = '';
                     
                     classSchedules.forEach(sched => {
                         if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
-                            currentSubj = sched.schedule[day][hour];
-                            currentProf = sched.teacherName || '';
-                            currentId = sched._id || '';
+                            const val = sched.schedule[day][hour];
+                            if (typeof val === 'object' && val !== null) {
+                                currentSubj = val.subject || '';
+                                currentProf = val.teacherName || '';
+                            } else {
+                                currentSubj = val;
+                                currentProf = sched.teacherName || '';
+                            }
                         }
                     });
 
                     let cellHighlight = '';
-                    if (teacherFilter !== 'ALL' && currentProf.toLowerCase() !== teacherFilter.toLowerCase()) {
-                        currentSubj = '';
-                        currentProf = '';
-                        cellHighlight = 'background: #fdfdfd; opacity: 0.3;';
-                    } else if (teacherFilter !== 'ALL' && currentProf.toLowerCase() === teacherFilter.toLowerCase()) {
-                        hasContentForTeacher = true;
-                        cellHighlight = 'background: #e6ffed;';
+                    if (teacherFilter !== 'ALL') {
+                        if (!currentProf || currentProf.trim().toLowerCase() !== teacherFilter.trim().toLowerCase()) {
+                            currentSubj = '';
+                            currentProf = '';
+                            cellHighlight = 'background: #fdfdfd; opacity: 0.3;';
+                        } else {
+                            hasContentForTeacher = true;
+                            cellHighlight = 'background: #e6ffed;';
+                        }
                     }
 
                     tableHTML += `<td style="${cellHighlight}">
                         <div class="cell-content">
-                            <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière" data-id="${currentId}">
-                            <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant" data-id="${currentId}">
+                            <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
+                            <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
                             <div class="btn-action-cell">
                                 <button class="btn-save-cell" id="btn_save_${className}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Mod</button>
                                 <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supp</button>
@@ -278,141 +305,74 @@
             `;
             listDiv.appendChild(section);
         });
+
+        // Mettre à jour la liste déroulante des profs après le rendu complet
+        updateTeacherDropdown();
     }
 
     async function saveCell(className, day, hour) {
-        const subjectEl = document.getElementById(`subj_${className}_${day}_${hour}`);
-        const profEl = document.getElementById(`prof_${className}_${day}_${hour}`);
+        const subject = document.getElementById(`subj_${className}_${day}_${hour}`).value;
+        const teacherName = document.getElementById(`prof_${className}_${day}_${hour}`).value;
         const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
 
-        const subject = subjectEl ? subjectEl.value.trim() : '';
-        const teacherName = profEl ? profEl.value.trim() : '';
-        const documentId = subjectEl ? subjectEl.getAttribute('data-id') : '';
+        if (teacherName && teacherName.trim() !== '' && subject && subject.trim() !== '') {
+            let conflictFound = false;
+            let conflictClass = '';
 
-        let conflitTrouve = false;
-        let conflitClasse = '';
-
-        if (teacherName !== '' && subject !== '') {
-            if (typeof globalSchedulesData !== 'undefined') {
-                globalSchedulesData.forEach(planning => {
-                    if (planning.className !== className && planning.teacherName === teacherName) {
-                        if (planning.schedule && planning.schedule[day] && planning.schedule[day][hour]) {
-                            if (planning.schedule[day][hour].trim() !== '') {
-                                conflitTrouve = true;
-                                conflitClasse = planning.className;
-                            }
-                        }
+            globalSchedulesData.forEach(sched => {
+                if (sched.className !== className && sched.teacherName && sched.teacherName.toLowerCase() === teacherName.toLowerCase()) {
+                    if (sched.schedule && sched.schedule[day] && sched.schedule[day][hour]) {
+                        conflictFound = true;
+                        conflictClass = sched.className;
                     }
-                });
-            }
+                }
+            });
 
-            if (conflitTrouve) {
-                alert(`Attention : Le professeur ${teacherName} a déjà cours dans la classe ${conflitClasse} à cette heure !`);
+            if (conflictFound) {
+                const confirmConflict = confirm(`⚠️ Attention : L'enseignant "${teacherName}" est déjà programmé dans la classe "${conflictClass}" sur ce même créneau (${day} à ${hour}). S'agit-il d'un cours commun (tronc commun) ?`);
+                if (!confirmConflict) return;
             }
         }
 
-        if (btn) {
-            btn.textContent = 'Enregistrement...';
-            btn.disabled = true;
-        }
+        const oldText = btn.textContent;
+        btn.textContent = '...';
+        btn.disabled = true;
 
         try {
-            let res;
-
-            // Si un document existe (a un ID), utiliser PUT pour modifier
-            if (documentId && documentId !== '') {
-                res = await fetch(API_BASE_URL + '/api/schedules/' + documentId, {
-                    method: 'PUT',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        className: className,
-                        teacherName: teacherName || 'Non spécifié',
-                        subject: subject,
-                        schedule: {
-                            [day]: {
-                                [hour]: subject
-                            }
-                        }
-                    })
-                });
-            } else {
-                // Sinon, créer un nouveau document avec POST
-                res = await fetch(API_BASE_URL + '/api/schedules', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        className: className,
-                        teacherName: teacherName || 'Non spécifié',
-                        subject: subject,
-                        schedule: {
-                            [day]: {
-                                [hour]: subject
-                            }
-                        }
-                    })
-                });
-            }
+            const res = await fetch(API_BASE_URL + '/api/schedules', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    className: className,
+                    teacherName: teacherName || 'Non spécifié',
+                    subject: subject,
+                    schedule: { [day]: { [hour]: subject } }
+                })
+            });
 
             if (res.ok) {
-                if (btn) {
-                    btn.textContent = 'Enregistré !';
-                    setTimeout(() => {
-                        btn.textContent = 'Mod';
-                        btn.disabled = false;
-                    }, 1500);
-                }
-                loadSchedules();
+                btn.textContent = 'OK !';
+                setTimeout(() => { loadSchedules(); }, 500);
             } else {
-                alert('Erreur lors de la sauvegarde sur le serveur.');
-                if (btn) {
-                    btn.textContent = 'Mod';
-                    btn.disabled = false;
-                }
+                alert('Erreur lors de la modification.');
+                btn.textContent = oldText;
+                btn.disabled = false;
             }
         } catch (err) {
             console.error(err);
             alert('Impossible de contacter le serveur.');
-            if (btn) {
-                btn.textContent = 'Mod';
-                btn.disabled = false;
-            }
+            btn.textContent = oldText;
+            btn.disabled = false;
         }
     }
 
     async function deleteCell(className, day, hour) {
         if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
 
-        const subjectEl = document.getElementById(`subj_${className}_${day}_${hour}`);
-        const documentId = subjectEl ? subjectEl.getAttribute('data-id') : '';
-
-        // Si pas d'ID, il n'y a rien à supprimer
-        if (!documentId || documentId === '') {
-            alert('Aucun cours à supprimer.');
-            return;
-        }
-
         document.getElementById(`subj_${className}_${day}_${hour}`).value = '';
         document.getElementById(`prof_${className}_${day}_${hour}`).value = '';
-
-        try {
-            // Utiliser DELETE avec l'ID MongoDB
-            const res = await fetch(API_BASE_URL + '/api/schedules/' + documentId, {
-                method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' }
-            });
-
-            if (res.ok) {
-                alert('Cours supprimé avec succès');
-                loadSchedules();
-            } else {
-                alert('Erreur lors de la suppression sur le serveur.');
-            }
-        } catch (err) {
-            console.error(err);
-            alert('Impossible de contacter le serveur.');
-        }
+        saveCell(className, day, hour);
     }
-
 
     function printClassPDF(sectionId, className) {
         const element = document.getElementById(sectionId);
@@ -443,27 +403,30 @@
             margin: 5,
             filename: `emploi_du_temps_${className.replace(/\s+/g, '_')}.pdf`,
             image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true },
+            html2canvas: { scale: 2, useCORS: true, logging: true },
             jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
         };
 
-        html2pdf().set(opt).from(element).save().then(() => {
-            if (btnPrint) btnPrint.style.display = 'block';
-            actionsCells.forEach(el => el.style.display = 'flex');
-            
-            subjectInputs.forEach(input => {
-                input.style.border = '1px solid #ccc';
-                input.style.background = 'white';
-                input.style.fontWeight = 'normal';
-                input.style.fontStyle = 'normal';
+        // Délai de 250ms pour garantir le rendu visuel complet avant capture par html2pdf
+        setTimeout(() => {
+            html2pdf().set(opt).from(element).save().then(() => {
+                if (btnPrint) btnPrint.style.display = 'block';
+                actionsCells.forEach(el => el.style.display = 'flex');
+                
+                subjectInputs.forEach(input => {
+                    input.style.border = '1px solid #ccc';
+                    input.style.background = 'white';
+                    input.style.fontWeight = 'normal';
+                    input.style.fontStyle = 'normal';
+                });
+                profInputs.forEach(input => {
+                    input.style.border = '1px solid #ccc';
+                    input.style.background = '#fafafa';
+                    input.style.fontWeight = 'normal';
+                    input.style.fontStyle = 'normal';
+                });
             });
-            profInputs.forEach(input => {
-                input.style.border = '1px solid #ccc';
-                input.style.background = '#fafafa';
-                input.style.fontWeight = 'normal';
-                input.style.fontStyle = 'normal';
-            });
-        });
+        }, 250);
     }
 
     if (isLoggedIn()) {
