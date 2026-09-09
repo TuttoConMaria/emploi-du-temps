@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin - Gestion Emploi du Temps</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { font-family: Arial, sans-serif; background-color: #f4f6f8; }
@@ -50,9 +49,51 @@
         .btn-save-cell:hover { background-color: #218838; }
         .btn-del-cell:hover { background-color: #c82333; }
 
-        /* Signature compacte alignée à droite */
-        .signature-container { display: flex; justify-content: flex-end; margin-top: 15px; }
+        .signature-container { display: flex; justify-content: flex-end; margin-top: 15px; display: none; } /* Caché à l'écran, affiché uniquement à l'impression */
         .signature-box { text-align: center; min-width: 250px; }
+
+        /* --- RÈGLES D'IMPRESSION CSS NATIVES (A4 Paysage Parfait) --- */
+        @media print {
+            @page {
+                size: A4 landscape;
+                margin: 10mm;
+            }
+            body * {
+                visibility: hidden;
+            }
+            .class-section-print-target, .class-section-print-target * {
+                visibility: visible;
+            }
+            .class-section-print-target {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                background: white !important;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 5px !important;
+                border: none !important;
+            }
+            .btn-print-class, .btn-action-cell {
+                display: none !important;
+            }
+            .cell-input {
+                border: none !important;
+                background: transparent !important;
+                font-weight: bold;
+                font-size: 11px;
+            }
+            .cell-prof {
+                border: none !important;
+                background: transparent !important;
+                font-weight: normal;
+                font-size: 10px;
+            }
+            .signature-container {
+                display: flex !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -220,6 +261,7 @@
 
         classes.forEach((className, index) => {
             const classSchedules = schedules.filter(s => s.className === className);
+            const classId = className.replace(/\s+/g, '_');
            
             let tableHTML = '<table><thead><tr><th>Horaires</th>';
             days.forEach(day => tableHTML += `<th>${day.charAt(0).toUpperCase() + day.slice(1)}</th>`);
@@ -260,10 +302,10 @@
 
                     tableHTML += `<td style="${cellHighlight}">
                         <div class="cell-content">
-                            <input type="text" class="cell-input" id="subj_${className}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
-                            <input type="text" class="cell-prof" id="prof_${className}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
+                            <input type="text" class="cell-input" id="subj_${classId}_${day}_${hour}" value="${currentSubj}" placeholder="Matière">
+                            <input type="text" class="cell-prof" id="prof_${classId}_${day}_${hour}" value="${currentProf}" placeholder="Enseignant">
                             <div class="btn-action-cell">
-                                <button class="btn-save-cell" id="btn_save_${className}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Mod</button>
+                                <button class="btn-save-cell" id="btn_save_${classId}_${day}_${hour}" onclick="saveCell('${className}', '${day}', '${hour}')">Mod</button>
                                 <button class="btn-del-cell" onclick="deleteCell('${className}', '${day}', '${hour}')">Supp</button>
                             </div>
                         </div>
@@ -290,7 +332,7 @@
                 <div class="class-title">
                     <strong>CPET CATHOLIQUE SAINT JOSEPH BOHICON - Classe : ${className}</strong>
                 </div>
-                <button class="btn-print-class" onclick="printClassPDF('class_section_${index}', '${className}')">📄 Télécharger/Imprimer cette classe en PDF</button>
+                <button class="btn-print-class" onclick="printClassPDF('class_section_${index}')">📄 Télécharger/Imprimer cette classe en PDF</button>
                 ${tableHTML}
                 <div class="signature-container">
                     <div class="signature-box">
@@ -307,9 +349,10 @@
     }
 
     async function saveCell(className, day, hour) {
-        const subject = document.getElementById(`subj_${className}_${day}_${hour}`).value;
-        const teacherName = document.getElementById(`prof_${className}_${day}_${hour}`).value;
-        const btn = document.getElementById(`btn_save_${className}_${day}_${hour}`);
+        const classId = className.replace(/\s+/g, '_');
+        const subject = document.getElementById(`subj_${classId}_${day}_${hour}`).value;
+        const teacherName = document.getElementById(`prof_${classId}_${day}_${hour}`).value;
+        const btn = document.getElementById(`btn_save_${classId}_${day}_${hour}`);
 
         if (teacherName && teacherName.trim() !== '' && subject && subject.trim() !== '') {
             let conflictFound = false;
@@ -365,65 +408,23 @@
     async function deleteCell(className, day, hour) {
         if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
 
-        document.getElementById(`subj_${className}_${day}_${hour}`).value = '';
-        document.getElementById(`prof_${className}_${day}_${hour}`).value = '';
+        const classId = className.replace(/\s+/g, '_');
+        document.getElementById(`subj_${classId}_${day}_${hour}`).value = '';
+        document.getElementById(`prof_${classId}_${day}_${hour}`).value = '';
         saveCell(className, day, hour);
     }
 
-    function printClassPDF(sectionId, className) {
-        const element = document.getElementById(sectionId);
+    function printClassPDF(sectionId) {
+        const sectionElement = document.getElementById(sectionId);
         
-        const btnPrint = element.querySelector('.btn-print-class');
-        const actionsCells = element.querySelectorAll('.btn-action-cell');
-        const subjectInputs = element.querySelectorAll('.cell-input');
-        const profInputs = element.querySelectorAll('.cell-prof');
+        // Active le mode d'impression unique pour la section ciblée
+        sectionElement.classList.add('class-section-print-target');
 
-        if (btnPrint) btnPrint.style.display = 'none';
-        actionsCells.forEach(el => el.style.display = 'none');
-        
-        subjectInputs.forEach(input => {
-            input.setAttribute('value', input.value); // Force la capture du texte saisi dans les inputs
-            input.style.border = 'none';
-            input.style.background = 'transparent';
-            input.style.fontWeight = 'bold';
-            input.style.fontStyle = 'italic';
-        });
+        // Lance la boîte d'impression native (choisir "Enregistrer au format PDF" et orientation "Paysage")
+        window.print();
 
-        profInputs.forEach(input => {
-            input.setAttribute('value', input.value); // Force la capture du texte saisi dans les inputs
-            input.style.border = 'none';
-            input.style.background = 'transparent';
-            input.style.fontWeight = 'normal';
-            input.style.fontStyle = 'normal';
-        });
-
-        const opt = {
-            margin: 5,
-            filename: `emploi_du_temps_${className.replace(/\s+/g, '_')}.pdf`,
-            image: { type: 'jpeg', quality: 0.98 },
-            html2canvas: { scale: 2, useCORS: true, logging: true },
-            jsPDF: { orientation: 'landscape', unit: 'mm', format: 'a4' }
-        };
-
-        setTimeout(() => {
-            html2pdf().set(opt).from(element).save().then(() => {
-                if (btnPrint) btnPrint.style.display = 'block';
-                actionsCells.forEach(el => el.style.display = 'flex');
-                
-                subjectInputs.forEach(input => {
-                    input.style.border = '1px solid #ccc';
-                    input.style.background = 'white';
-                    input.style.fontWeight = 'normal';
-                    input.style.fontStyle = 'normal';
-                });
-                profInputs.forEach(input => {
-                    input.style.border = '1px solid #ccc';
-                    input.style.background = '#fafafa';
-                    input.style.fontWeight = 'normal';
-                    input.style.fontStyle = 'normal';
-                });
-            });
-        }, 250);
+        // Nettoie l'affichage après fermeture de la fenêtre d'impression
+        sectionElement.classList.remove('class-section-print-target');
     }
 
     if (isLoggedIn()) {
