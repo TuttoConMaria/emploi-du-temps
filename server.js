@@ -24,28 +24,51 @@ const scheduleSchema = new mongoose.Schema({
     teacherName: String,
     subject: String,
     phone: String,
-    schedule: Object
+    schedule: Object,
+    createdAt: { type: Date, default: Date.now },
+    updatedAt: { type: Date, default: Date.now }
 });
 
 const Schedule = mongoose.model('Schedule', scheduleSchema);
 
-// Routes
-
-// GET - Récupérer tous les emplois
+// GET - Récupérer tous les emplois du temps
 app.get('/api/schedules', async (req, res) => {
     try {
-        const schedules = await Schedule.find();
+        const schedules = await Schedule.find().sort({ className: 1 });
         res.json(schedules);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// POST - Créer un nouvel emploi
+// POST - Créer ou mettre à jour un emploi (UPSERT)
 app.post('/api/schedules', async (req, res) => {
     try {
-        const newSchedule = new Schedule(req.body);
-        const savedSchedule = await newSchedule.save();
+        const { className, teacherName, subject, schedule } = req.body;
+
+        if (!className) {
+            return res.status(400).json({ message: 'className est requis' });
+        }
+
+        let scheduleDoc = await Schedule.findOne({ className });
+
+        if (!scheduleDoc) {
+            scheduleDoc = new Schedule({
+                className,
+                teacherName: teacherName || 'Non spécifié',
+                subject: subject || '',
+                schedule: schedule || {}
+            });
+        } else {
+            if (teacherName) scheduleDoc.teacherName = teacherName;
+            if (subject) scheduleDoc.subject = subject;
+            if (schedule) {
+                scheduleDoc.schedule = { ...scheduleDoc.schedule, ...schedule };
+            }
+        }
+
+        scheduleDoc.updatedAt = new Date();
+        const savedSchedule = await scheduleDoc.save();
         res.json(savedSchedule);
     } catch (err) {
         res.status(500).json({ message: err.message });
@@ -63,21 +86,24 @@ app.get('/api/schedules/:id', async (req, res) => {
     }
 });
 
-// PUT - Modifier un emploi
+// PUT - Modifier un emploi par ID
 app.put('/api/schedules/:id', async (req, res) => {
     try {
         const updatedSchedule = await Schedule.findByIdAndUpdate(
             req.params.id,
-            req.body,
+            { ...req.body, updatedAt: new Date() },
             { new: true }
         );
+        if (!updatedSchedule) {
+            return res.status(404).json({ message: 'Non trouvé' });
+        }
         res.json(updatedSchedule);
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
 });
 
-// DELETE - Supprimer un emploi
+// DELETE - Supprimer un emploi entier par ID
 app.delete('/api/schedules/:id', async (req, res) => {
     try {
         await Schedule.findByIdAndDelete(req.params.id);
@@ -85,6 +111,45 @@ app.delete('/api/schedules/:id', async (req, res) => {
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
+});
+
+// DELETE - Supprimer un créneau spécifique
+app.delete('/api/schedules/cell', async (req, res) => {
+    try {
+        const { className, day, hour } = req.body;
+
+        if (!className || !day || !hour) {
+            return res.status(400).json({ message: 'className, day et hour sont requis' });
+        }
+
+        const scheduleDoc = await Schedule.findOne({ className });
+        if (!scheduleDoc) {
+            return res.status(404).json({ message: 'Classe non trouvée' });
+        }
+
+        if (scheduleDoc.schedule && scheduleDoc.schedule[day]) {
+            delete scheduleDoc.schedule[day][hour];
+            
+            if (Object.keys(scheduleDoc.schedule[day]).length === 0) {
+                delete scheduleDoc.schedule[day];
+            }
+        }
+
+        scheduleDoc.updatedAt = new Date();
+        const savedSchedule = await scheduleDoc.save();
+        res.json({ message: 'Créneau supprimé avec succès', savedSchedule });
+    } catch (err) {
+        res.status(500).json({ message: err.message });
+    }
+});
+
+// Servir le fichier HTML principal
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, 'index.html'));
+});
+
+app.use((req, res) => {
+    res.status(404).json({ message: 'Route non trouvée' });
 });
 
 const PORT = process.env.PORT || 3000;
