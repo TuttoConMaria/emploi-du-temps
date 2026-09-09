@@ -17,17 +17,14 @@ mongoose.connect(MONGODB_URI, {
 .catch(err => console.error('❌ Erreur de connexion MongoDB :', err));
 
 const scheduleSchema = new mongoose.Schema({
-    className: String,
-    teacherName: String,
-    subject: String,
-    phone: String,
-    schedule: mongoose.Schema.Types.Mixed,
-    createdAt: { type: Date, default: Date.now },
+    className: { type: String, required: true, unique: true },
+    schedule: { type: mongoose.Schema.Types.Mixed, default: {} },
     updatedAt: { type: Date, default: Date.now }
 });
 
 const Schedule = mongoose.model('Schedule', scheduleSchema);
 
+// Récupérer tous les emplois du temps
 app.get('/api/schedules', async (req, res) => {
     try {
         const schedules = await Schedule.find().sort({ className: 1 });
@@ -37,12 +34,13 @@ app.get('/api/schedules', async (req, res) => {
     }
 });
 
+// Enregistrer ou modifier un créneau
 app.post('/api/schedules', async (req, res) => {
     try {
-        const { className, teacherName, subject, schedule } = req.body;
+        const { className, day, hour, subject, teacherName } = req.body;
 
-        if (!className) {
-            return res.status(400).json({ message: 'className est requis' });
+        if (!className || !day || !hour) {
+            return res.status(400).json({ message: 'className, day et hour sont requis' });
         }
 
         let scheduleDoc = await Schedule.findOne({ className });
@@ -50,19 +48,26 @@ app.post('/api/schedules', async (req, res) => {
         if (!scheduleDoc) {
             scheduleDoc = new Schedule({
                 className,
-                teacherName: teacherName || 'Non spécifié',
-                subject: subject || '',
-                schedule: schedule || {}
+                schedule: {}
             });
-        } else {
-            if (teacherName) scheduleDoc.teacherName = teacherName;
-            if (subject) scheduleDoc.subject = subject;
-            if (schedule) {
-                scheduleDoc.schedule = { ...scheduleDoc.schedule, ...schedule };
-            }
         }
 
+        if (!scheduleDoc.schedule) {
+            scheduleDoc.schedule = {};
+        }
+        if (!scheduleDoc.schedule[day]) {
+            scheduleDoc.schedule[day] = {};
+        }
+
+        // Enregistrement sous forme d'objet propre pour la case
+        scheduleDoc.schedule[day][hour] = {
+            subject: subject || '',
+            teacherName: teacherName || 'Non spécifié'
+        };
+
+        scheduleDoc.markModified('schedule');
         scheduleDoc.updatedAt = new Date();
+        
         const savedSchedule = await scheduleDoc.save();
         res.json(savedSchedule);
     } catch (err) {
@@ -70,32 +75,7 @@ app.post('/api/schedules', async (req, res) => {
     }
 });
 
-app.get('/api/schedules/:id', async (req, res) => {
-    try {
-        const schedule = await Schedule.findById(req.params.id);
-        if (!schedule) return res.status(404).json({ message: 'Non trouvé' });
-        res.json(schedule);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-app.put('/api/schedules/:id', async (req, res) => {
-    try {
-        const updatedSchedule = await Schedule.findByIdAndUpdate(
-            req.params.id,
-            { ...req.body, updatedAt: new Date() },
-            { new: true }
-        );
-        if (!updatedSchedule) {
-            return res.status(404).json({ message: 'Non trouvé' });
-        }
-        res.json(updatedSchedule);
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
+// Supprimer un créneau spécifique (Route DELETE)
 app.delete('/api/schedules/cell', async (req, res) => {
     try {
         const { className, day, hour } = req.body;
@@ -104,31 +84,19 @@ app.delete('/api/schedules/cell', async (req, res) => {
             return res.status(400).json({ message: 'className, day et hour sont requis' });
         }
 
-        const unsetPath = `schedule.${day}.${hour}`;
-        
-        const updatedSchedule = await Schedule.findOneAndUpdate(
-            { className: className },
-            { $unset: { [unsetPath]: "" } },
-            { new: true }
-        );
-
-        if (!updatedSchedule) {
+        const scheduleDoc = await Schedule.findOne({ className });
+        if (!scheduleDoc) {
             return res.status(404).json({ message: 'Classe non trouvée' });
         }
 
-        updatedSchedule.updatedAt = new Date();
-        await updatedSchedule.save();
+        if (scheduleDoc.schedule && scheduleDoc.schedule[day]) {
+            delete scheduleDoc.schedule[day][hour];
+            scheduleDoc.markModified('schedule');
+            scheduleDoc.updatedAt = new Date();
+            await scheduleDoc.save();
+        }
 
-        res.json({ message: 'Créneau supprimé avec succès', data: updatedSchedule });
-    } catch (err) {
-        res.status(500).json({ message: err.message });
-    }
-});
-
-app.delete('/api/schedules/:id', async (req, res) => {
-    try {
-        await Schedule.findByIdAndDelete(req.params.id);
-        res.json({ message: 'Supprimé avec succès' });
+        res.json({ message: 'Créneau supprimé avec succès', data: scheduleDoc });
     } catch (err) {
         res.status(500).json({ message: err.message });
     }
@@ -146,3 +114,4 @@ const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
     console.log(`🚀 Serveur démarré sur le port ${PORT}`);
 });
+
