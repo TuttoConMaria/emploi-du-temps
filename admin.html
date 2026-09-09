@@ -412,16 +412,32 @@
     }
 
     async function deleteCell(className, day, hour) {
-        if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
+    if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
 
-        const classId = className.replace(/\s+/g, '_');
-        const subjInput = document.getElementById(`subj_${classId}_${day}_${hour}`);
-        const profInput = document.getElementById(`prof_${classId}_${day}_${hour}`);
+    const classId = className.replace(/\s+/g, '_');
+    const subjInput = document.getElementById(`subj_${classId}_${day}_${hour}`);
+    const profInput = document.getElementById(`prof_${classId}_${day}_${hour}`);
 
-        if (subjInput) subjInput.value = '';
-        if (profInput) profInput.value = '';
-        
-        await saveCell(className, day, hour);
+    if (subjInput) subjInput.value = '';
+    if (profInput) profInput.value = '';
+
+    try {
+        const res = await fetch(API_BASE_URL + '/api/schedules/cell', {
+            method: 'DELETE',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ className, day, hour })
+        });
+
+        if (res.ok) {
+            setTimeout(() => { loadSchedules(); }, 300);
+        } else {
+            alert('Erreur lors de la suppression sur le serveur.');
+        }
+    } catch (err) {
+        console.error(err);
+        alert('Impossible de contacter le serveur pour la suppression.');
+    }
+}
     }
 
     function printClassPDF(sectionId) {
