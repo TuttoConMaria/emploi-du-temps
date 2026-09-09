@@ -49,7 +49,7 @@
         .btn-save-cell:hover { background-color: #218838; }
         .btn-del-cell:hover { background-color: #c82333; }
 
-        .signature-container { display: flex; justify-content: flex-end; margin-top: 15px; display: none; } /* Caché à l'écran, affiché uniquement à l'impression */
+        .signature-container { display: flex; justify-content: flex-end; margin-top: 15px; display: none; }
         .signature-box { text-align: center; min-width: 250px; }
 
         /* --- RÈGLES D'IMPRESSION CSS NATIVES (A4 Paysage Parfait) --- */
@@ -373,9 +373,11 @@
             }
         }
 
-        const oldText = btn.textContent;
-        btn.textContent = '...';
-        btn.disabled = true;
+        const oldText = btn ? btn.textContent : 'Mod';
+        if (btn) {
+            btn.textContent = '...';
+            btn.disabled = true;
+        }
 
         try {
             const res = await fetch(API_BASE_URL + '/api/schedules', {
@@ -390,18 +392,22 @@
             });
 
             if (res.ok) {
-                btn.textContent = 'OK !';
+                if (btn) btn.textContent = 'OK !';
                 setTimeout(() => { loadSchedules(); }, 500);
             } else {
                 alert('Erreur lors de la modification.');
-                btn.textContent = oldText;
-                btn.disabled = false;
+                if (btn) {
+                    btn.textContent = oldText;
+                    btn.disabled = false;
+                }
             }
         } catch (err) {
             console.error(err);
             alert('Impossible de contacter le serveur.');
-            btn.textContent = oldText;
-            btn.disabled = false;
+            if (btn) {
+                btn.textContent = oldText;
+                btn.disabled = false;
+            }
         }
     }
 
@@ -409,21 +415,19 @@
         if (!confirm('Voulez-vous vraiment supprimer ce cours ?')) return;
 
         const classId = className.replace(/\s+/g, '_');
-        document.getElementById(`subj_${classId}_${day}_${hour}`).value = '';
-        document.getElementById(`prof_${classId}_${day}_${hour}`).value = '';
-        saveCell(className, day, hour);
+        const subjInput = document.getElementById(`subj_${classId}_${day}_${hour}`);
+        const profInput = document.getElementById(`prof_${classId}_${day}_${hour}`);
+
+        if (subjInput) subjInput.value = '';
+        if (profInput) profInput.value = '';
+        
+        await saveCell(className, day, hour);
     }
 
     function printClassPDF(sectionId) {
         const sectionElement = document.getElementById(sectionId);
-        
-        // Active le mode d'impression unique pour la section ciblée
         sectionElement.classList.add('class-section-print-target');
-
-        // Lance la boîte d'impression native (choisir "Enregistrer au format PDF" et orientation "Paysage")
         window.print();
-
-        // Nettoie l'affichage après fermeture de la fenêtre d'impression
         sectionElement.classList.remove('class-section-print-target');
     }
 
@@ -437,3 +441,4 @@
 
 </body>
 </html>
+
